@@ -90,6 +90,10 @@ body {
   background: #fff;
   flex-shrink: 0;
 }
+.opts-account-avatar-empty {
+  display: inline-block;
+  background: #f1f2f3;
+}
 .opts-account-item-info {
   flex: 1;
   min-width: 0;
