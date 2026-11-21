@@ -11,6 +11,19 @@
     '<svg viewBox="0 0 24 24" aria-hidden="true">' +
     '<path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>' +
     "</svg>";
+  const CHECK_ICON =
+    '<svg viewBox="0 0 24 24" aria-hidden="true">' +
+    '<path d="m5 12 5 5L19 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>' +
+    "</svg>";
+  const ARROW_ICON =
+    '<svg viewBox="0 0 24 24" aria-hidden="true">' +
+    '<path d="m9 5 7 7-7 7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>' +
+    "</svg>";
+
+  const TAG = "[B站多账号切换]";
+  function log(...args) {
+    console.log(TAG, ...args);
+  }
 
   const state = {
     accounts: [],
@@ -28,6 +41,8 @@
   let scanTimer = 0;
   let switching = false;
   let syncing = false;
+  let debugDumped = false;
+  let lastProfileRefresh = 0;
 
   /* ---------- 和后台通信 ---------- */
   function send(message) {
@@ -69,6 +84,20 @@
     return '<img class="bili-switch-item-avatar" src="' + url + '" alt="">';
   }
 
+  /* 从 B站 顶部头像拿当前账号的实时头像，避免和存下来的旧头像对不上 */
+  function liveHeaderAvatar() {
+    const header = document.querySelector(".bili-header, #biliHeader, .mini-header");
+    if (!header) return "";
+    const imgs = header.querySelectorAll('img[src*="/bfs/face/"], img[data-src*="/bfs/face/"]');
+    for (const img of imgs) {
+      const url = avatarUrl(
+        img.currentSrc || img.src || img.getAttribute("data-src") || ""
+      );
+      if (url) return url;
+    }
+    return "";
+  }
+
   function ensureToast() {
     if ($toast && $toast.isConnected) return $toast;
     $toast = document.getElementById("bili-switch-toast");
@@ -105,6 +134,11 @@
         state.autoSwitch = res.cfgAutoSwitch !== false;
         state.showBtn = res.cfgShowBtn !== false;
         state.accounts = Array.isArray(res[STORAGE_KEY]) ? res[STORAGE_KEY] : [];
+        log("读取设置", {
+          showBtn: state.showBtn,
+          autoSwitch: state.autoSwitch,
+          accounts: state.accounts.length,
+        });
         applySettings();
         renderPanel();
         syncCurrentUser();
@@ -120,7 +154,6 @@
       return;
     }
     scheduleInsert(0);
-    renderButtonAvatar();
   }
 
   chrome.storage.onChanged.addListener((changes, area) => {
@@ -135,10 +168,28 @@
     if (changes[STORAGE_KEY]) {
       const next = changes[STORAGE_KEY].newValue;
       state.accounts = Array.isArray(next) ? next : [];
-      renderButtonAvatar();
       renderPanel();
     }
   });
+
+  /* 控制台排查信息：只打印 Cookie 名字和账号概况，不打印 Cookie 值 */
+  function dumpDebugInfo(force) {
+    if (debugDumped && !force) return;
+    debugDumped = true;
+    send({ action: "debugInfo" }).then((info) => {
+      if (!info || !info.ok) {
+        log("调试信息获取失败", info);
+        return;
+      }
+      console.groupCollapsed(TAG + " 调试信息");
+      console.log("版本:", info.version, "页面:", location.href);
+      console.log("登录状态:", info.loggedIn, "当前 UID:", info.mid, "lastMid:", info.lastMid);
+      console.log("当前 Cookie 数:", info.cookieCount);
+      console.table(info.cookies);
+      console.table(info.accounts);
+      console.groupEnd();
+    });
+  }
 
   /* 每次打开 B站 页面都问一次后台：当前号存过没有，没存就自动抓下来 */
   function syncCurrentUser() {
@@ -158,33 +209,14 @@
           showToast("已自动记下：" + (res.account.name || res.account.mid));
         }
       }
-      renderButtonAvatar();
+      log("同步结果", res);
       renderPanel();
       scheduleInsert(0);
+      dumpDebugInfo(false);
     });
   }
 
   /* ---------- 注入入口 ---------- */
-  function renderButtonAvatar() {
-    const btn = document.getElementById("bili-switch-btn");
-    if (!btn) return;
-    const img = btn.querySelector(".bili-switch-avatar");
-    const icon = btn.querySelector(".bili-switch-swap-icon");
-    const acct = findCurrentAccount();
-    const url = acct ? avatarUrl(acct.avatar) : "";
-
-    if (img) {
-      if (url) {
-        if (img.getAttribute("src") !== url) img.src = url;
-        img.style.display = "";
-      } else {
-        img.removeAttribute("src");
-        img.style.display = "none";
-      }
-    }
-    if (icon) icon.style.display = url ? "none" : "";
-  }
-
   function createButton(kind) {
     const btn = document.createElement("div");
     btn.id = "bili-switch-btn";
@@ -195,11 +227,12 @@
     btn.tabIndex = 0;
     btn.innerHTML =
       '<span class="bili-switch-entry-icon">' +
-      '<img class="bili-switch-avatar" alt="" style="display:none">' +
       SWAP_ICON +
       "</span>" +
       '<span class="bili-switch-text">切换账号</span>' +
-      (kind === "menu" ? '<span class="bili-switch-arrow">›</span>' : "");
+      (kind === "menu"
+        ? '<span class="bili-switch-arrow">' + ARROW_ICON + "</span>"
+        : "");
 
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
@@ -303,7 +336,11 @@
       holder.appendChild(btn);
     }
     found.parent.insertBefore(holder, found.item);
-    renderButtonAvatar();
+    log("注入入口", {
+      kind,
+      parent: parentTag,
+      path: location.pathname,
+    });
   }
 
   function scheduleInsert(delay = 80) {
@@ -358,22 +395,20 @@
     panel.setAttribute("role", "menu");
     panel.setAttribute("aria-label", "切换账号");
     panel.innerHTML =
-      '<div class="bili-switch-panel-header">' +
-      '<span class="bili-switch-panel-title">切换账号</span>' +
-      '<button type="button" class="bili-switch-panel-close" id="bili-switch-close" title="关闭" aria-label="关闭">×</button>' +
-      "</div>" +
       '<div class="bili-switch-list" id="bili-switch-list"></div>' +
       '<div class="bili-switch-divider"></div>' +
       '<div class="bili-switch-add" id="bili-switch-add" role="menuitem" tabindex="0">' +
       '<span class="bili-switch-add-icon">' +
       PLUS_ICON +
-      "</span><span>添加账户</span></div>";
+      "</span><span>添加账户</span>" +
+      '<span class="bili-switch-arrow">' +
+      ARROW_ICON +
+      "</span></div>";
     document.body.appendChild(panel);
 
     $panel = panel;
     $list = document.getElementById("bili-switch-list");
 
-    document.getElementById("bili-switch-close").addEventListener("click", hidePanel);
     document.getElementById("bili-switch-add").addEventListener("click", (e) => {
       e.stopPropagation();
       handleAdd();
@@ -418,12 +453,25 @@
     $panel.style.top = top + "px";
   }
 
+  function refreshCurrentProfile() {
+    if (!state.currentUser.loggedIn) return;
+    const now = Date.now();
+    if (now - lastProfileRefresh < 60 * 1000) return;
+    lastProfileRefresh = now;
+    send({ action: "refreshProfile" }).then((res) => {
+      log("刷新账号资料", res);
+      if (res && res.ok && res.updated) renderPanel();
+    });
+  }
+
   function showPanel() {
     createPanel();
     renderPanel();
     $panel.classList.add("is-open");
     positionPanel();
+    log("打开面板", { mid: state.currentUser.mid, accounts: state.accounts.length });
     syncCurrentUser();
+    refreshCurrentProfile();
   }
 
   function hidePanel() {
@@ -436,7 +484,9 @@
     item.setAttribute("role", "menuitem");
     item.tabIndex = 0;
     item.innerHTML =
-      avatarHtml("") +
+      '<span class="bili-switch-item-avatar bili-switch-avatar-empty bili-switch-save-icon">' +
+      PLUS_ICON +
+      "</span>" +
       '<div class="bili-switch-item-info">' +
       '<div class="bili-switch-item-name">保存当前账号</div>' +
       '<div class="bili-switch-item-mid">UID: ' +
@@ -485,15 +535,15 @@
       item.setAttribute("role", "menuitem");
       item.tabIndex = 0;
       item.innerHTML =
-        avatarHtml(acct.avatar) +
+        avatarHtml(active ? liveHeaderAvatar() || acct.avatar : acct.avatar) +
         '<div class="bili-switch-item-info">' +
         '<div class="bili-switch-item-name">' +
         escapeHtml(acct.name || "未命名账号") +
-        (active ? '<span class="bili-switch-item-tag">当前</span>' : "") +
         "</div>" +
         '<div class="bili-switch-item-mid">UID: ' +
         escapeHtml(acct.mid || "-") +
-        "</div></div>";
+        "</div></div>" +
+        (active ? '<span class="bili-switch-item-check">' + CHECK_ICON + "</span>" : "");
 
       const choose = () => switchAccount(idx);
       item.addEventListener("click", choose);
@@ -517,9 +567,9 @@
         return;
       }
       state.currentUser = { loggedIn: true, mid: res.account.mid };
-      renderButtonAvatar();
       renderPanel();
       showToast("已保存：" + (res.account.name || res.account.mid));
+      log("手动保存账号", res.account);
       scheduleInsert(0);
     });
   }
@@ -558,18 +608,26 @@
 
     switching = true;
     showToast("正在切换到 " + (acct.name || "该账号") + "…");
+    log("请求切换", { mid: acct.mid, name: acct.name, from: state.currentUser.mid });
     send({ action: "switchAccount", mid: acct.mid }).then((res) => {
+      if (res && res.steps && res.steps.length) {
+        console.groupCollapsed(TAG + " 切换流程");
+        res.steps.forEach((s) => console.log(s));
+        console.groupEnd();
+      }
       if (!res || !res.ok) {
         switching = false;
+        console.error(TAG, "切换失败", res);
         showToast("切换失败：" + ((res && res.error) || "未知错误"), 3200);
+        dumpDebugInfo(true);
         return;
       }
       state.currentUser = { loggedIn: true, mid: acct.mid };
+      log("切换成功", { mid: acct.mid, autoSwitch: state.autoSwitch });
       if (state.autoSwitch) {
         setTimeout(() => location.reload(), 500);
       } else {
         switching = false;
-        renderButtonAvatar();
         showToast("已切换，刷新一下页面才会生效。", 3200);
       }
     });
@@ -577,6 +635,15 @@
 
   /* ---------- 启动 ---------- */
   function start() {
+    try {
+      const manifest = chrome.runtime.getManifest ? chrome.runtime.getManifest() : null;
+      log("页面加载", {
+        version: manifest ? manifest.version_name || manifest.version : "?",
+        url: location.href,
+      });
+    } catch (_) {
+      log("页面加载", location.href);
+    }
     loadSettings();
     watchDom();
     scheduleInsert(600);

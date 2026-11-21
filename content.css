@@ -56,15 +56,6 @@
   flex-shrink: 0;
 }
 
-.bili-switch-avatar {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 1px solid #e3e5e7;
-  background: #fff;
-}
-
 .bili-switch-swap-icon {
   display: block;
   width: 20px;
@@ -78,11 +69,17 @@
 }
 
 .bili-switch-arrow {
+  display: flex;
+  align-items: center;
   margin-left: auto;
   padding-left: 8px;
   color: #c9ccd0;
-  font-size: 16px;
-  line-height: 1;
+}
+
+.bili-switch-arrow svg {
+  display: block;
+  width: 16px;
+  height: 16px;
 }
 
 /* 二级面板 */
@@ -105,38 +102,6 @@
 
 .bili-switch-panel.is-open {
   display: flex;
-}
-
-.bili-switch-panel-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 8px 6px;
-}
-
-.bili-switch-panel-title {
-  color: #9499a0;
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.bili-switch-panel-close {
-  width: 24px;
-  height: 24px;
-  margin-left: auto;
-  padding: 0;
-  border: none;
-  border-radius: 6px;
-  background: none;
-  color: #9499a0;
-  font-size: 18px;
-  line-height: 1;
-  cursor: pointer;
-}
-
-.bili-switch-panel-close:hover {
-  background: #f6f7f8;
-  color: #18191c;
 }
 
 .bili-switch-list {
@@ -179,6 +144,18 @@
   background: #f1f2f3;
 }
 
+.bili-switch-save-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #9499a0;
+}
+
+.bili-switch-save-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
 .bili-switch-item-info {
   min-width: 0;
   flex: 1;
@@ -202,17 +179,20 @@
   text-overflow: ellipsis;
 }
 
-.bili-switch-item-tag {
-  display: inline-block;
-  margin-left: 6px;
-  padding: 0 5px;
-  border-radius: 4px;
-  background: #00aeff;
-  color: #fff;
-  font-size: 11px;
-  font-weight: 400;
-  line-height: 16px;
-  vertical-align: 1px;
+.bili-switch-item-check {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  margin-left: auto;
+  color: #00aeff;
+  flex-shrink: 0;
+}
+
+.bili-switch-item-check svg {
+  width: 18px;
+  height: 18px;
 }
 
 .bili-switch-divider {
