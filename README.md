@@ -18,6 +18,8 @@ B站网页端多账号切换小助手（浏览器插件，Manifest V3）。在 B
 
 ## 文件说明
 
+- 根目录：最新版本的插件文件，直接加载使用即可。
+- `versions/`：历史版本归档，每个版本一个独立完整文件夹（如 `versions/v1.0.0/`），旧版本会被完整保留，不会被新版本覆盖。
 - `manifest.json`：插件清单，Manifest V3。
 - `content.js` / `content.css`：往 B站页面注入“切换账号”按钮和弹出面板。
 - `options.html` / `options.css` / `options.js`：插件的设置页面。
