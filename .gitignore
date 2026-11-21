@@ -1,0 +1,23 @@
+# GitHub 推送忽略（本地 AGENTS.md 永不上传）
+
+# 本会话专用文档，只存在于本地，绝对不要推送到任何远程仓库
+AGENTS.md
+
+# 依赖与构建产物
+node_modules/
+package-lock.json
+dist/
+build/
+*.crx
+*.zip
+
+# 操作系统
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 编辑器
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
