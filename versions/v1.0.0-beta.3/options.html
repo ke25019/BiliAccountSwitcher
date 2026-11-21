@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>B站多账号切换 - 设置</title>
+<link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <div class="opts-wrap">
+    <header class="opts-header">
+      <h1>B站多账号切换</h1>
+      <p class="opts-subtitle">设置</p>
+    </header>
+
+    <section class="opts-card">
+      <h2 class="opts-section-title">账号管理</h2>
+      <p class="opts-hint">这里保存你登录过的 B站账号，用于在网页端快速切换。登录 B站 后会自动记下当前账号，也可以从网页端“添加账户”登录新号。账号的登录凭据（Cookie）只存在本机浏览器里，不会上传到任何地方。别把这个浏览器的资料随便分享给别人。</p>
+      <div class="opts-account-list" id="accountList"></div>
+      <div class="opts-empty" id="emptyState" style="display:none;">暂无保存的账号。登录 B站 后会自动记下来；也可以在网页端点“切换账号”→“添加账户”登录一个。</div>
+    </section>
+
+    <section class="opts-card">
+      <h2 class="opts-section-title">切换行为</h2>
+      <label class="opts-row">
+        <input type="checkbox" id="cfgAutoSwitch">
+        <span>切换账号后自动刷新页面</span>
+      </label>
+      <label class="opts-row">
+        <input type="checkbox" id="cfgShowBtn" checked>
+        <span>在 B站顶部菜单显示“切换账号”按钮</span>
+      </label>
+    </section>
+
+    <section class="opts-card opts-footer">
+      <h2 class="opts-section-title">关于</h2>
+      <div class="opts-meta">
+        <div><strong>版本号</strong>: <span id="appVersion">1.0.0-beta.3</span></div>
+        <div><strong>适用平台</strong>: B站网页端（bilibili.com）</div>
+      </div>
+
+      <h3 class="opts-disclaimer-title">免责声明</h3>
+      <p class="opts-disclaimer">
+        本插件仅供个人学习和日常使用，由第三方开发，与哔哩哔哩官方无任何关联，也不代表哔哩哔哩背书或认可。
+        使用本插件切换账号属于个人行为，请你自行遵守哔哩哔哩的用户协议与社区规范。因使用本插件导致的账号异常、数据丢失或任何
+        直接、间接损失，由使用者自行承担，开发者不提供任何保证，也不承担责任。
+      </p>
+
+      <h3 class="opts-license-title">开源许可</h3>
+      <p class="opts-license">
+        本插件基于 <strong>PolyForm Noncommercial License 1.0.0</strong> 发布，属于开源软件。
+        你可以自由使用、复制、修改和分发，但 <strong>不得用于商业目的</strong>。完整许可条款请参阅：
+        <a href="https://polyformproject.org/licenses/noncommercial/1.0.0" target="_blank" rel="noopener">
+          PolyForm Noncommercial License 1.0.0
+        </a>
+      </p>
+      <p class="opts-notes">如需商业使用，请另行联系开发者取得授权。</p>
+    </section>
+  </div>
+  <script src="options.js"></script>
+</body>
+</html>

@@ -2,6 +2,7 @@
    Cookie 读写和自动记账号都在 background.js，这里只管界面 */
 (function () {
   const STORAGE_KEY = "bili_switcher_accounts";
+  const LAST_SWITCH_KEY = "bili_switcher_last_switch";
 
   const SWAP_ICON =
     '<svg class="bili-switch-swap-icon" viewBox="0 0 24 24" aria-hidden="true">' +
@@ -24,6 +25,9 @@
   function log(...args) {
     console.log(TAG, ...args);
   }
+  function logError(...args) {
+    console.error(TAG, ...args);
+  }
 
   const state = {
     accounts: [],
@@ -43,6 +47,10 @@
   let syncing = false;
   let debugDumped = false;
   let lastProfileRefresh = 0;
+  let lastSync = 0;
+  let hideTimer = 0;
+  let openTimer = 0;
+  let lastSwitchReported = false;
 
   /* ---------- 和后台通信 ---------- */
   function send(message) {
@@ -134,14 +142,17 @@
         state.autoSwitch = res.cfgAutoSwitch !== false;
         state.showBtn = res.cfgShowBtn !== false;
         state.accounts = Array.isArray(res[STORAGE_KEY]) ? res[STORAGE_KEY] : [];
-        log("读取设置", {
-          showBtn: state.showBtn,
-          autoSwitch: state.autoSwitch,
-          accounts: state.accounts.length,
-        });
+        log(
+          "读取设置 " +
+            JSON.stringify({
+              showBtn: state.showBtn,
+              autoSwitch: state.autoSwitch,
+              accounts: state.accounts.length,
+            })
+        );
         applySettings();
         renderPanel();
-        syncCurrentUser();
+        syncCurrentUser(true);
       }
     );
   }
@@ -178,22 +189,60 @@
     debugDumped = true;
     send({ action: "debugInfo" }).then((info) => {
       if (!info || !info.ok) {
-        log("调试信息获取失败", info);
+        log("调试信息获取失败 " + JSON.stringify(info));
         return;
       }
-      console.groupCollapsed(TAG + " 调试信息");
-      console.log("版本:", info.version, "页面:", location.href);
-      console.log("登录状态:", info.loggedIn, "当前 UID:", info.mid, "lastMid:", info.lastMid);
-      console.log("当前 Cookie 数:", info.cookieCount);
-      console.table(info.cookies);
-      console.table(info.accounts);
-      console.groupEnd();
+      // 用一行 JSON 输出，导出的控制台日志里才能看到内容
+      log("调试信息 " + JSON.stringify(info));
+    });
+  }
+
+  function reportLastSwitch() {
+    if (lastSwitchReported) return;
+    lastSwitchReported = true;
+    chrome.storage.local.get(LAST_SWITCH_KEY, (res) => {
+      const rec = res && res[LAST_SWITCH_KEY];
+      if (!rec) return;
+      const nowMid = state.currentUser.mid || "";
+      const toMid = String(rec.toMid || "");
+      const canCheck = !!toMid && toMid !== "-";
+      const mismatched =
+        rec.ok && canCheck && (!state.currentUser.loggedIn || String(nowMid) !== toMid);
+      log(
+        "上次切换记录 " +
+          JSON.stringify({
+            at: rec.at ? new Date(rec.at).toLocaleString() : "",
+            fromMid: rec.fromMid,
+            toMid: rec.toMid,
+            toName: rec.toName,
+            ok: rec.ok,
+            error: rec.error,
+            steps: rec.steps,
+            nowLoggedIn: state.currentUser.loggedIn,
+            nowMid,
+            mismatched,
+          })
+      );
+      if (mismatched) {
+        showToast(
+          "切换后 B站 没保持登录，可能这个号的登录信息过期了，重新登录保存一次吧。",
+          4500
+        );
+      }
+      try {
+        chrome.storage.local.remove(LAST_SWITCH_KEY);
+      } catch (_) {
+        // 老环境没有 remove 也不影响页面
+      }
     });
   }
 
   /* 每次打开 B站 页面都问一次后台：当前号存过没有，没存就自动抓下来 */
-  function syncCurrentUser() {
+  function syncCurrentUser(force) {
     if (syncing) return;
+    const now = Date.now();
+    if (!force && now - lastSync < 1500) return;
+    lastSync = now;
     syncing = true;
     send({ action: "syncCurrent" }).then((res) => {
       syncing = false;
@@ -209,10 +258,11 @@
           showToast("已自动记下：" + (res.account.name || res.account.mid));
         }
       }
-      log("同步结果", res);
+      log("同步结果 " + JSON.stringify(res));
       renderPanel();
       scheduleInsert(0);
       dumpDebugInfo(false);
+      reportLastSwitch();
     });
   }
 
@@ -226,24 +276,34 @@
     btn.setAttribute("role", "menuitem");
     btn.tabIndex = 0;
     btn.innerHTML =
+      '<span class="bili-switch-entry-title">' +
       '<span class="bili-switch-entry-icon">' +
       SWAP_ICON +
       "</span>" +
       '<span class="bili-switch-text">切换账号</span>' +
+      "</span>" +
       (kind === "menu"
         ? '<span class="bili-switch-arrow">' + ARROW_ICON + "</span>"
         : "");
 
+    btn.addEventListener("mouseenter", () => openFromHover(btn));
+    btn.addEventListener("mouseleave", () => {
+      clearTimeout(openTimer);
+      scheduleHide(280);
+    });
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
       e.preventDefault();
+      clearTimeout(openTimer);
+      cancelHide();
       anchorBtn = btn;
-      if ($panel && $panel.classList.contains("is-open")) hidePanel();
+      if (isPanelOpen()) hidePanel();
       else showPanel();
     });
     btn.addEventListener("keydown", (e) => {
       if (e.key === "Enter" || e.key === " ") {
         e.preventDefault();
+        clearTimeout(openTimer);
         anchorBtn = btn;
         showPanel();
       }
@@ -336,11 +396,14 @@
       holder.appendChild(btn);
     }
     found.parent.insertBefore(holder, found.item);
-    log("注入入口", {
-      kind,
-      parent: parentTag,
-      path: location.pathname,
-    });
+    log(
+      "注入入口 " +
+        JSON.stringify({
+          kind,
+          parent: parentTag,
+          path: location.pathname,
+        })
+    );
   }
 
   function scheduleInsert(delay = 80) {
@@ -419,6 +482,33 @@
         handleAdd();
       }
     });
+    panel.addEventListener("mouseenter", cancelHide);
+    panel.addEventListener("mouseleave", () => scheduleHide(220));
+  }
+
+  function cancelHide() {
+    if (hideTimer) {
+      clearTimeout(hideTimer);
+      hideTimer = 0;
+    }
+  }
+
+  function scheduleHide(delay = 240) {
+    cancelHide();
+    hideTimer = setTimeout(() => {
+      hideTimer = 0;
+      hidePanel();
+    }, delay);
+  }
+
+  function openFromHover(btn) {
+    anchorBtn = btn;
+    cancelHide();
+    clearTimeout(openTimer);
+    openTimer = setTimeout(() => {
+      openTimer = 0;
+      if (btn.isConnected) showPanel();
+    }, 80);
   }
 
   function isPanelOpen() {
@@ -434,8 +524,12 @@
     const gap = 8;
     const margin = 8;
 
+    // 菜单里的入口按整个菜单左边缘来放，避免面板压住菜单本身
+    const menuBox = anchorBtn.closest(".v-popover-content, .avatar-panel-popover");
+    const rightEdge = menuBox ? menuBox.getBoundingClientRect().left : btnRect.left;
+
     // 优先放在按钮左边，像 B站 自己的二级浮层
-    let left = btnRect.left - panelRect.width - gap;
+    let left = rightEdge - panelRect.width - gap;
     let top = btnRect.top - 8;
 
     if (left < margin) {
@@ -459,22 +553,30 @@
     if (now - lastProfileRefresh < 60 * 1000) return;
     lastProfileRefresh = now;
     send({ action: "refreshProfile" }).then((res) => {
-      log("刷新账号资料", res);
+      log("刷新账号资料 " + JSON.stringify(res));
       if (res && res.ok && res.updated) renderPanel();
     });
   }
 
   function showPanel() {
+    const wasOpen = isPanelOpen();
+    cancelHide();
     createPanel();
     renderPanel();
     $panel.classList.add("is-open");
     positionPanel();
-    log("打开面板", { mid: state.currentUser.mid, accounts: state.accounts.length });
+    if (!wasOpen) {
+      log(
+        "打开面板 " +
+          JSON.stringify({ mid: state.currentUser.mid, accounts: state.accounts.length })
+      );
+    }
     syncCurrentUser();
     refreshCurrentProfile();
   }
 
   function hidePanel() {
+    cancelHide();
     if ($panel) $panel.classList.remove("is-open");
   }
 
@@ -569,7 +671,7 @@
       state.currentUser = { loggedIn: true, mid: res.account.mid };
       renderPanel();
       showToast("已保存：" + (res.account.name || res.account.mid));
-      log("手动保存账号", res.account);
+      log("手动保存账号 " + JSON.stringify(res.account));
       scheduleInsert(0);
     });
   }
@@ -608,22 +710,27 @@
 
     switching = true;
     showToast("正在切换到 " + (acct.name || "该账号") + "…");
-    log("请求切换", { mid: acct.mid, name: acct.name, from: state.currentUser.mid });
+    log(
+      "请求切换 " +
+        JSON.stringify({ mid: acct.mid, name: acct.name, from: state.currentUser.mid })
+    );
     send({ action: "switchAccount", mid: acct.mid }).then((res) => {
       if (res && res.steps && res.steps.length) {
-        console.groupCollapsed(TAG + " 切换流程");
-        res.steps.forEach((s) => console.log(s));
-        console.groupEnd();
+        log("切换流程 " + JSON.stringify(res.steps));
       }
       if (!res || !res.ok) {
         switching = false;
-        console.error(TAG, "切换失败", res);
+        logError("切换失败 " + JSON.stringify(res));
         showToast("切换失败：" + ((res && res.error) || "未知错误"), 3200);
         dumpDebugInfo(true);
+        reportLastSwitch();
         return;
       }
       state.currentUser = { loggedIn: true, mid: acct.mid };
-      log("切换成功", { mid: acct.mid, autoSwitch: state.autoSwitch });
+      log(
+        "切换成功 " +
+          JSON.stringify({ mid: acct.mid, autoSwitch: state.autoSwitch })
+      );
       if (state.autoSwitch) {
         setTimeout(() => location.reload(), 500);
       } else {
@@ -637,12 +744,15 @@
   function start() {
     try {
       const manifest = chrome.runtime.getManifest ? chrome.runtime.getManifest() : null;
-      log("页面加载", {
-        version: manifest ? manifest.version_name || manifest.version : "?",
-        url: location.href,
-      });
+      log(
+        "页面加载 " +
+          JSON.stringify({
+            version: manifest ? manifest.version_name || manifest.version : "?",
+            url: location.href,
+          })
+      );
     } catch (_) {
-      log("页面加载", location.href);
+      log("页面加载 " + location.href);
     }
     loadSettings();
     watchDom();

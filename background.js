@@ -4,6 +4,7 @@
    另外负责抓当前登录信息、打开 B站登录页。 */
 const STORAGE_KEY = "bili_switcher_accounts";
 const LAST_MID_KEY = "bili_switcher_last_mid";
+const LAST_SWITCH_KEY = "bili_switcher_last_switch";
 const NAV_API = "https://api.bilibili.com/x/web-interface/nav";
 const LOGIN_URL = "https://passport.bilibili.com/login";
 
@@ -356,22 +357,51 @@ async function switchAccount(mid) {
     steps.push(msg);
     log("切换", msg);
   };
+  const before = await getCurrentUser();
+  const record = {
+    at: Date.now(),
+    fromMid: before.mid || "",
+    toMid: String(mid || ""),
+    toName: "",
+    ok: false,
+    error: "",
+    steps,
+  };
+  const finish = async (result) => {
+    record.ok = !!result.ok;
+    record.error = result.error || "";
+    try {
+      await storageSet({ [LAST_SWITCH_KEY]: record });
+    } catch (e) {
+      warn("保存切换记录失败", e.message || e);
+    }
+    log("切换结果", {
+      ok: record.ok,
+      error: record.error,
+      fromMid: record.fromMid,
+      toMid: record.toMid,
+      toName: record.toName,
+      steps,
+    });
+    return result;
+  };
 
   const stored = await storageGet(STORAGE_KEY);
   const accounts = Array.isArray(stored[STORAGE_KEY]) ? stored[STORAGE_KEY] : [];
   const account = accounts.find((a) => String(a.mid) === String(mid));
   if (!account) {
-    return { ok: false, error: "找不到这个账号，可能已经在设置页删掉了。", steps };
+    return finish({ ok: false, error: "找不到这个账号，可能已经在设置页删掉了。", steps });
   }
+  record.toName = account.name || "";
   if (!Array.isArray(account.cookies) || account.cookies.length === 0) {
-    return { ok: false, error: "这个账号没有保存登录信息，重新添加一次吧。", steps };
+    return finish({ ok: false, error: "这个账号没有保存登录信息，重新添加一次吧。", steps });
   }
   const sess = account.cookies.find((c) => c.name === "SESSDATA" && c.value);
   if (!sess) {
-    return { ok: false, error: "这个账号没存到登录 Cookie，重新添加一次吧。", steps };
+    return finish({ ok: false, error: "这个账号没存到登录 Cookie，重新添加一次吧。", steps });
   }
   if (typeof sess.expirationDate === "number" && sess.expirationDate * 1000 < Date.now()) {
-    return { ok: false, error: "这个账号的登录信息已经过期，重新登录后再保存一次。", steps };
+    return finish({ ok: false, error: "这个账号的登录信息已经过期，重新登录后再保存一次。", steps });
   }
 
   const backup = await getBiliCookies();
@@ -416,7 +446,7 @@ async function switchAccount(mid) {
       step(`清掉旧账号 Cookie ${old.name} (${old.domain || "?"}${old.path || "/"})`);
     }
 
-    return { ok: true, steps };
+    return finish({ ok: true, steps });
   } catch (err) {
     step(`失败：${err.message || err}，开始恢复原来的 Cookie`);
     for (const cookie of written) {
@@ -429,7 +459,7 @@ async function switchAccount(mid) {
       }
     }
     step("已尝试恢复原来的 Cookie");
-    return { ok: false, error: err.message || String(err), steps };
+    return finish({ ok: false, error: err.message || String(err), steps });
   }
 }
 
