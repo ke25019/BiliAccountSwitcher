@@ -20,7 +20,7 @@
   border: 0;
   border-radius: 8px;
   background: transparent;
-  color: #61666d;
+  color: var(--text2, #61666d);
   font-size: 14px;
   font-weight: 500;
   line-height: 20px;
@@ -32,7 +32,7 @@
 
 .bili-switch-wrap:hover,
 .bili-switch-wrap:focus-visible {
-  background: #e3e5e7;
+  background: var(--graph_bg_thick, #e3e5e7);
 }
 
 /* 没登录时挂在顶部“登录”旁边，做成小一点的入口 */
@@ -44,7 +44,7 @@
 }
 
 .bili-switch-wrap.is-header:hover {
-  background: #f1f2f3;
+  background: var(--graph_bg_regular, #f1f2f3);
 }
 
 .bili-switch-wrap.is-header .bili-switch-arrow {
@@ -107,11 +107,11 @@
   max-height: 440px;
   box-sizing: border-box;
   padding: 8px 16px;
-  background: #fff;
-  border: 1px solid #e3e5e7;
+  background: var(--bg1_float, #fff);
+  border: 1px solid var(--line_regular, #e3e5e7);
   border-radius: 8px;
   box-shadow: 0 0 30px rgba(0, 0, 0, 0.1);
-  color: #18191c;
+  color: var(--text1, #18191c);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif;
   visibility: hidden;
   opacity: 0;
@@ -159,15 +159,15 @@
 
 .bili-switch-item:hover,
 .bili-switch-item:focus-visible {
-  background: #e3e5e7;
+  background: var(--graph_bg_thick, #e3e5e7);
 }
 
 .bili-switch-item.active {
-  background: #f1f2f3;
+  background: var(--graph_bg_regular, #f1f2f3);
 }
 
 .bili-switch-item.active:hover {
-  background: #e3e5e7;
+  background: var(--graph_bg_thick, #e3e5e7);
 }
 
 .bili-switch-item-avatar {
@@ -175,21 +175,21 @@
   height: 32px;
   border-radius: 50%;
   object-fit: cover;
-  border: 1px solid #e3e5e7;
-  background: #f1f2f3;
+  border: 1px solid var(--line_regular, #e3e5e7);
+  background: var(--graph_bg_regular, #f1f2f3);
   flex-shrink: 0;
 }
 
 .bili-switch-avatar-empty {
   display: inline-block;
-  background: #f1f2f3;
+  background: var(--graph_bg_regular, #f1f2f3);
 }
 
 .bili-switch-save-icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #9499a0;
+  color: var(--text3, #9499a0);
 }
 
 .bili-switch-save-icon svg {
@@ -203,7 +203,7 @@
 }
 
 .bili-switch-item-name {
-  color: #61666d;
+  color: var(--text2, #61666d);
   font-size: 14px;
   font-weight: 500;
   overflow: hidden;
@@ -213,7 +213,7 @@
 
 .bili-switch-item-mid {
   margin-top: 1px;
-  color: #9499a0;
+  color: var(--text3, #9499a0);
   font-size: 12px;
   overflow: hidden;
   white-space: nowrap;
@@ -227,7 +227,7 @@
   width: 20px;
   height: 20px;
   margin-left: auto;
-  color: #00aeec;
+  color: var(--brand_blue, #00aeec);
   flex-shrink: 0;
 }
 
@@ -239,7 +239,7 @@
 .bili-switch-divider {
   height: 1px;
   margin: 10px 0;
-  background: #e3e5e7;
+  background: var(--graph_bg_thick, #e3e5e7);
 }
 
 .bili-switch-add {
@@ -249,7 +249,7 @@
   box-sizing: border-box;
   padding: 0 14px;
   border-radius: 8px;
-  color: #61666d;
+  color: var(--text2, #61666d);
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
@@ -259,7 +259,7 @@
 
 .bili-switch-add:hover,
 .bili-switch-add:focus-visible {
-  background: #e3e5e7;
+  background: var(--graph_bg_thick, #e3e5e7);
 }
 
 .bili-switch-add-icon {
@@ -284,7 +284,7 @@
 
 .bili-switch-empty {
   padding: 18px 12px;
-  color: #9499a0;
+  color: var(--text3, #9499a0);
   font-size: 13px;
   line-height: 1.6;
   text-align: center;
@@ -309,7 +309,8 @@
   width: min(540px, calc(100vw - 32px));
   height: min(760px, calc(100vh - 32px));
   overflow: hidden;
-  background: #fff;
+  background: var(--bg1_float, #fff);
+  border: 1px solid var(--line_regular, #e3e5e7);
   border-radius: 8px;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
 }
@@ -320,11 +321,11 @@
   flex-shrink: 0;
   height: 44px;
   padding: 0 16px;
-  border-bottom: 1px solid #e3e5e7;
+  border-bottom: 1px solid var(--line_regular, #e3e5e7);
 }
 
 .bili-switch-modal-title {
-  color: #18191c;
+  color: var(--text1, #18191c);
   font-size: 14px;
   font-weight: 500;
 }
@@ -337,21 +338,21 @@
   border: none;
   border-radius: 6px;
   background: none;
-  color: #9499a0;
+  color: var(--text3, #9499a0);
   font-size: 20px;
   line-height: 1;
   cursor: pointer;
 }
 
 .bili-switch-modal-close:hover {
-  background: #f1f2f3;
-  color: #18191c;
+  background: var(--graph_bg_regular, #f1f2f3);
+  color: var(--text1, #18191c);
 }
 
 .bili-switch-modal-body {
   flex: 1;
   min-height: 0;
-  background: #fff;
+  background: var(--bg1_float, #fff);
 }
 
 .bili-switch-login-frame {
@@ -359,14 +360,14 @@
   width: 100%;
   height: 100%;
   border: 0;
-  background: #fff;
+  background: var(--bg1_float, #fff);
 }
 
 .bili-switch-modal-hint {
   flex-shrink: 0;
   padding: 8px 16px;
-  border-top: 1px solid #e3e5e7;
-  color: #9499a0;
+  border-top: 1px solid var(--line_regular, #e3e5e7);
+  color: var(--text3, #9499a0);
   font-size: 12px;
   line-height: 18px;
 }

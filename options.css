@@ -178,3 +178,86 @@ body {
   color: #888;
   font-style: italic;
 }
+
+/* 跟随 B站 的深色模式 */
+.bili-theme-dark {
+  color-scheme: dark;
+}
+
+.bili-theme-dark body {
+  background: #17181a;
+  color: #e7e9eb;
+}
+
+.bili-theme-dark .opts-header {
+  border-bottom-color: #2f3134;
+}
+
+.bili-theme-dark .opts-header h1 {
+  color: #e7e9eb;
+}
+
+.bili-theme-dark .opts-subtitle {
+  color: #a2a7ae;
+}
+
+.bili-theme-dark .opts-card {
+  background: #242628;
+  border-color: #2f3134;
+  box-shadow: none;
+}
+
+.bili-theme-dark .opts-section-title,
+.bili-theme-dark .opts-meta strong,
+.bili-theme-dark .opts-disclaimer-title,
+.bili-theme-dark .opts-license-title {
+  color: #e7e9eb;
+}
+
+.bili-theme-dark .opts-hint,
+.bili-theme-dark .opts-meta,
+.bili-theme-dark .opts-disclaimer,
+.bili-theme-dark .opts-license {
+  color: #a2a7ae;
+}
+
+.bili-theme-dark .opts-row {
+  color: #e7e9eb;
+}
+
+.bili-theme-dark .opts-account-item {
+  background: #1f2022;
+  border-color: #2f3134;
+}
+
+.bili-theme-dark .opts-account-item-avatar {
+  border-color: #2f3134;
+  background: #1f2022;
+}
+
+.bili-theme-dark .opts-account-item-name {
+  color: #e7e9eb;
+}
+
+.bili-theme-dark .opts-account-item-mid,
+.bili-theme-dark .opts-empty,
+.bili-theme-dark .opts-notes {
+  color: #757a81;
+}
+
+.bili-theme-dark .opts-account-item-remove {
+  color: #ff7b8a;
+}
+
+.bili-theme-dark .opts-footer.opts-card {
+  border-color: #2f3134;
+}
+
+.bili-theme-dark .opts-disclaimer {
+  background: #1f2022;
+  border-color: #2f3134;
+}
+
+.bili-theme-dark .opts-license a {
+  color: #00aeec;
+}

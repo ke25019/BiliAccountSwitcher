@@ -7,11 +7,37 @@
   const $cfgAuto = document.getElementById("cfgAutoSwitch");
   const $cfgBtn = document.getElementById("cfgShowBtn");
 
+  // 跟随 B站 的主题：B站 把深色模式存在 theme_style 这个 Cookie 里
+  function applyBiliTheme() {
+    if (!chrome.cookies || !chrome.cookies.get) return;
+    try {
+      chrome.cookies.get(
+        { url: "https://www.bilibili.com/", name: "theme_style" },
+        (cookie) => {
+          void chrome.runtime.lastError;
+          const dark = !!(cookie && cookie.value === "dark");
+          document.documentElement.classList.toggle("bili-theme-dark", dark);
+        }
+      );
+    } catch (_) {
+      // 没有 cookies 权限时保持浅色
+    }
+  }
+
+  applyBiliTheme();
+  if (chrome.cookies && chrome.cookies.onChanged) {
+    chrome.cookies.onChanged.addListener((info) => {
+      if (!info.cookie || info.cookie.name !== "theme_style") return;
+      if (String(info.cookie.domain || "").indexOf("bilibili.com") === -1) return;
+      applyBiliTheme();
+    });
+  }
+
   // 版本号
   fetch(chrome.runtime.getURL("manifest.json"))
     .then((r) => r.json())
     .then((m) => {
-      if ($version) $version.textContent = m.version_name || m.version || "1.1.2-beta";
+      if ($version) $version.textContent = m.version_name || m.version || "1.1.3-beta";
     })
     .catch(() => {});
 
