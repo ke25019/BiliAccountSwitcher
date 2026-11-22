@@ -149,6 +149,20 @@ async function getCurrentUser() {
   return { ok: true, loggedIn: true, mid: (mid && mid.value) || "" };
 }
 
+/* 添加新号前把当前账号退出，只删登录相关 Cookie，设备 Cookie 保留 */
+async function logoutCurrent() {
+  const cookies = await getBiliCookies();
+  const removed = [];
+  for (const cookie of cookies) {
+    if (!ACCOUNT_COOKIE_NAMES.has(cookie.name)) continue;
+    await cookieRemove(removeDetails(cookie));
+    removed.push(cookie.name);
+  }
+  const current = await getCurrentUser();
+  log("退出当前账号", { removed, stillLoggedIn: current.loggedIn });
+  return { ok: true, removed: removed.length, stillLoggedIn: current.loggedIn };
+}
+
 /* 控制台排查用的快照，只输出 Cookie 名字/域/路径，不输出值 */
 async function debugInfo() {
   const [cookies, stored] = await Promise.all([
@@ -601,6 +615,8 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     switch (action) {
       case "getCurrentUser":
         return getCurrentUser();
+      case "logoutCurrent":
+        return logoutCurrent();
       case "syncCurrent":
         return syncCurrent();
       case "captureAccount":

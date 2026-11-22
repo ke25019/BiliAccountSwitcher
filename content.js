@@ -51,6 +51,12 @@
   let hideTimer = 0;
   let openTimer = 0;
   let lastSwitchReported = false;
+  let $modal = null;
+  let addPollTimer = 0;
+  let addFlow = false;
+  let addClosing = false;
+  let addPreviousMid = "";
+  let addPrevOverflow = "";
 
   /* ---------- 和后台通信 ---------- */
   function send(message) {
@@ -697,21 +703,157 @@
     });
   }
 
-  function handleAdd() {
-    hidePanel();
-    const wasLoggedIn = state.currentUser.loggedIn;
-    send({ action: "openLogin" }).then((res) => {
-      if (res && res.ok) {
-        showToast(
-          wasLoggedIn
-            ? "已打开登录窗口。要加新号，先在窗口里退出当前账号再登录。"
-            : "已打开 B站登录窗口，登录成功后会自动记下这个号。",
-          3500
-        );
-      } else {
-        showToast("登录窗口没打开，手动去 passport.bilibili.com 登录吧。");
-      }
+  function createAddModal(wasLoggedIn) {
+    if ($modal) return $modal;
+    const mask = document.createElement("div");
+    mask.id = "bili-switch-modal";
+    mask.className = "bili-switch-modal-mask";
+    mask.setAttribute("role", "dialog");
+    mask.setAttribute("aria-modal", "true");
+    mask.setAttribute("aria-label", "添加账号");
+    mask.innerHTML =
+      '<div class="bili-switch-modal">' +
+      '<div class="bili-switch-modal-head">' +
+      '<span class="bili-switch-modal-title">添加账号</span>' +
+      '<button type="button" class="bili-switch-modal-close" aria-label="关闭">×</button>' +
+      "</div>" +
+      '<div class="bili-switch-modal-body">' +
+      '<iframe class="bili-switch-login-frame" title="B站登录" src="https://passport.bilibili.com/login"></iframe>' +
+      "</div>" +
+      '<div class="bili-switch-modal-hint">' +
+      (wasLoggedIn
+        ? "当前账号已经保存。登录新账号后会自动记下来；不想加就关掉，会切回原来的账号。"
+        : "登录成功后会自动记下这个账号。") +
+      "</div>" +
+      "</div>";
+    document.body.appendChild(mask);
+    mask.querySelector(".bili-switch-modal-close").addEventListener("click", () => {
+      cancelAddFlow();
     });
+    mask.addEventListener("mousedown", (e) => {
+      if (e.target === mask) cancelAddFlow();
+    });
+    $modal = mask;
+    return mask;
+  }
+
+  function showAddModal(wasLoggedIn) {
+    createAddModal(wasLoggedIn);
+    addPrevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    $modal.classList.add("is-open");
+  }
+
+  function closeAddModal() {
+    clearTimeout(addPollTimer);
+    addPollTimer = 0;
+    if ($modal) {
+      $modal.remove();
+      $modal = null;
+    }
+    document.body.style.overflow = addPrevOverflow || "";
+  }
+
+  function pollAddLogin() {
+    if (!addFlow) return;
+    send({ action: "getCurrentUser" }).then((cur) => {
+      if (!addFlow) return;
+      if (cur && cur.ok && cur.loggedIn) {
+        addFlow = false;
+        closeAddModal();
+        send({ action: "captureAccount" }).then((cap) => {
+          if (cap && cap.ok) {
+            showToast("已保存：" + (cap.account.name || cap.account.mid));
+          } else {
+            showToast(
+              "登录成功，但保存账号失败：" + ((cap && cap.error) || "未知错误"),
+              4000
+            );
+          }
+          setTimeout(() => location.reload(), 700);
+        });
+        return;
+      }
+      addPollTimer = setTimeout(pollAddLogin, 900);
+    });
+  }
+
+  async function startAddFlow() {
+    if (addFlow || addClosing) return;
+    addFlow = true;
+    hidePanel();
+
+    const current = await send({ action: "getCurrentUser" });
+    const wasLoggedIn = !!(current && current.ok && current.loggedIn);
+    addPreviousMid = wasLoggedIn ? current.mid || "" : "";
+    log(
+      "添加账号：开始 " +
+        JSON.stringify({ wasLoggedIn, previousMid: addPreviousMid })
+    );
+
+    if (wasLoggedIn) {
+      showToast("正在保存当前账号…");
+      const saved = await send({ action: "captureAccount" });
+      if (!saved || !saved.ok) {
+        addFlow = false;
+        showToast((saved && saved.error) || "当前账号没保存成功，先不退出登录。");
+        return;
+      }
+      const out = await send({ action: "logoutCurrent" });
+      log("添加账号：退出当前号 " + JSON.stringify(out));
+      if (!out || !out.ok || out.stillLoggedIn) {
+        addFlow = false;
+        showToast("退出当前账号失败，先不加新号了。", 3500);
+        return;
+      }
+      state.currentUser = { loggedIn: false, mid: "" };
+      log("添加账号：已退出当前账号，准备登录新号");
+    }
+
+    if (!addFlow) return;
+    showAddModal(wasLoggedIn);
+    pollAddLogin();
+  }
+
+  async function cancelAddFlow() {
+    if (addClosing) return;
+    if (!$modal && !addFlow) return;
+    addClosing = true;
+    addFlow = false;
+    clearTimeout(addPollTimer);
+    addPollTimer = 0;
+    closeAddModal();
+
+    const prevMid = addPreviousMid;
+    addPreviousMid = "";
+    try {
+      const current = await send({ action: "getCurrentUser" });
+      if (current && current.ok && current.loggedIn) {
+        if (prevMid && String(current.mid) !== String(prevMid)) {
+          await send({ action: "captureAccount" });
+          showToast("已保存新账号，正在刷新页面…");
+          setTimeout(() => location.reload(), 600);
+          return;
+        }
+        showToast("登录窗口已关闭");
+        return;
+      }
+
+      if (prevMid) {
+        showToast("已取消，正在切回原账号…");
+        const res = await send({ action: "switchAccount", mid: prevMid });
+        if (res && res.ok) setTimeout(() => location.reload(), 500);
+        else showToast("切回原账号失败：" + ((res && res.error) || "未知错误"), 4000);
+      } else {
+        showToast("登录窗口已关闭");
+      }
+    } finally {
+      addClosing = false;
+    }
+  }
+
+  function handleAdd() {
+    startAddFlow();
   }
 
   function switchAccount(idx) {
@@ -789,7 +931,12 @@
 
     document.addEventListener("mouseover", onHeaderHover, true);
     document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") hidePanel();
+      if (e.key !== "Escape") return;
+      if ($modal) {
+        cancelAddFlow();
+        return;
+      }
+      hidePanel();
     });
     document.addEventListener(
       "mousedown",

@@ -290,6 +290,87 @@
   text-align: center;
 }
 
+/* 添加账号：页面内弹窗，里面直接嵌 B站 登录页 */
+.bili-switch-modal-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483647;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  box-sizing: border-box;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.bili-switch-modal {
+  display: flex;
+  flex-direction: column;
+  width: min(540px, calc(100vw - 32px));
+  height: min(760px, calc(100vh - 32px));
+  overflow: hidden;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+}
+
+.bili-switch-modal-head {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  height: 44px;
+  padding: 0 16px;
+  border-bottom: 1px solid #e3e5e7;
+}
+
+.bili-switch-modal-title {
+  color: #18191c;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.bili-switch-modal-close {
+  width: 28px;
+  height: 28px;
+  margin-left: auto;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: #9499a0;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.bili-switch-modal-close:hover {
+  background: #f1f2f3;
+  color: #18191c;
+}
+
+.bili-switch-modal-body {
+  flex: 1;
+  min-height: 0;
+  background: #fff;
+}
+
+.bili-switch-login-frame {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: #fff;
+}
+
+.bili-switch-modal-hint {
+  flex-shrink: 0;
+  padding: 8px 16px;
+  border-top: 1px solid #e3e5e7;
+  color: #9499a0;
+  font-size: 12px;
+  line-height: 18px;
+}
+
 .bili-switch-toast {
   position: fixed;
   z-index: 2147483648;

@@ -1,0 +1,180 @@
+/* B站多账号切换 - 设置页样式 */
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
+    "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+  background: #f5f5f5;
+  color: #222;
+  line-height: 1.5;
+}
+.opts-wrap {
+  max-width: 700px;
+  margin: 24px auto;
+  padding: 0 16px;
+}
+.opts-header {
+  padding-bottom: 16px;
+  border-bottom: 1px solid #ddd;
+  margin-bottom: 24px;
+}
+.opts-header h1 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: #222;
+}
+.opts-subtitle {
+  margin: 4px 0 0;
+  color: #666;
+  font-size: 14px;
+}
+.opts-card {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 16px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+.opts-section-title {
+  margin: 0 0 10px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #222;
+}
+.opts-hint {
+  margin: 0 0 14px;
+  font-size: 13px;
+  color: #666;
+}
+.opts-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: #333;
+  cursor: pointer;
+  padding: 8px 0;
+}
+.opts-row input {
+  width: 18px;
+  height: 18px;
+  accent-color: #00aeff;
+}
+.opts-row span {
+  user-select: none;
+}
+.opts-account-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.opts-account-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid #e2e2e2;
+  border-radius: 8px;
+  background: #fafafa;
+}
+.opts-account-item-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid #ccc;
+  background: #fff;
+  flex-shrink: 0;
+}
+.opts-account-avatar-empty {
+  display: inline-block;
+  background: #f1f2f3;
+}
+.opts-account-item-info {
+  flex: 1;
+  min-width: 0;
+}
+.opts-account-item-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #222;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.opts-account-item-mid {
+  font-size: 12px;
+  color: #888;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.opts-account-item-remove {
+  margin-left: 10px;
+  background: none;
+  border: none;
+  color: #b00020;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 4px;
+  line-height: 1;
+}
+.opts-account-item-remove:hover {
+  text-decoration: underline;
+}
+.opts-empty {
+  font-size: 13px;
+  color: #888;
+  padding: 16px 0;
+  text-align: center;
+}
+
+/* 页脚 / 关于 */
+.opts-footer.opts-card {
+  border-color: #eaeaea;
+}
+.opts-meta {
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+  color: #555;
+  margin-bottom: 14px;
+}
+.opts-meta strong {
+  color: #222;
+}
+.opts-disclaimer-title,
+.opts-license-title {
+  margin: 14px 0 6px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #222;
+}
+.opts-disclaimer {
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: #555;
+  background: #fafafa;
+  border: 1px dashed #ddd;
+  border-radius: 6px;
+  padding: 12px;
+}
+.opts-license {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: #555;
+}
+.opts-license a {
+  color: #00aeff;
+  text-decoration: underline;
+}
+.opts-notes {
+  margin: 0;
+  font-size: 12px;
+  color: #888;
+  font-style: italic;
+}
