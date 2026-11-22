@@ -5,13 +5,23 @@
 const STORAGE_KEY = "bili_switcher_accounts";
 const LAST_MID_KEY = "bili_switcher_last_mid";
 const LAST_SWITCH_KEY = "bili_switcher_last_switch";
+const STATS_KEY = "bili_switcher_stats";
 const NAV_API = "https://api.bilibili.com/x/web-interface/nav";
 const LOGIN_URL = "https://passport.bilibili.com/login";
 
 /* 调试输出，前缀统一，方便在控制台过滤；不打印 Cookie 的值 */
 const TAG = "[B站多账号切换]";
+let debugEnabled = true;
+chrome.storage.local.get({ cfgDebug: true }, (res) => {
+  debugEnabled = res.cfgDebug !== false;
+});
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === "local" && changes.cfgDebug) {
+    debugEnabled = changes.cfgDebug.newValue !== false;
+  }
+});
 function log(...args) {
-  console.log(TAG, ...args);
+  if (debugEnabled) console.log(TAG, ...args);
 }
 function warn(...args) {
   console.warn(TAG, ...args);
@@ -381,6 +391,30 @@ function sameCookie(a, b) {
   );
 }
 
+function todayKey() {
+  const now = new Date();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return now.getFullYear() + "-" + month + "-" + day;
+}
+
+async function bumpSwitchStats() {
+  try {
+    const stored = await storageGet(STATS_KEY);
+    const stats = stored[STATS_KEY] || { date: "", today: 0, total: 0 };
+    const today = todayKey();
+    if (stats.date !== today) {
+      stats.date = today;
+      stats.today = 0;
+    }
+    stats.today = (stats.today || 0) + 1;
+    stats.total = (stats.total || 0) + 1;
+    await storageSet({ [STATS_KEY]: stats });
+  } catch (e) {
+    warn("更新切换统计失败", e.message || e);
+  }
+}
+
 async function switchAccount(mid) {
   const steps = [];
   const step = (msg) => {
@@ -443,14 +477,29 @@ async function switchAccount(mid) {
   }
   record.toName = account.name || "";
   if (!Array.isArray(account.cookies) || account.cookies.length === 0) {
-    return finish({ ok: false, error: "这个账号没有保存登录信息，重新添加一次吧。", steps });
+    return finish({
+      ok: false,
+      error: "这个账号没有保存登录信息，重新添加一次吧。",
+      expired: true,
+      steps,
+    });
   }
   const sess = account.cookies.find((c) => c.name === "SESSDATA" && c.value);
   if (!sess) {
-    return finish({ ok: false, error: "这个账号没存到登录 Cookie，重新添加一次吧。", steps });
+    return finish({
+      ok: false,
+      error: "这个账号没存到登录 Cookie，重新添加一次吧。",
+      expired: true,
+      steps,
+    });
   }
   if (typeof sess.expirationDate === "number" && sess.expirationDate * 1000 < Date.now()) {
-    return finish({ ok: false, error: "这个账号的登录信息已经过期，重新登录后再保存一次。", steps });
+    return finish({
+      ok: false,
+      error: "这个账号的登录信息已经过期，重新登录后再保存一次。",
+      expired: true,
+      steps,
+    });
   }
 
   const backup = await getBiliCookies();
@@ -502,7 +551,9 @@ async function switchAccount(mid) {
     // 用 B站 自己的 nav 接口再确认一次，防止写进去了但登录状态其实已经失效
     const nav = await fetchNavUser();
     if (!nav) {
-      throw new Error("切换后 B站 接口没返回登录状态，保存的登录信息可能已经过期");
+      const navError = new Error("切换后 B站 接口没返回登录状态，保存的登录信息可能已经过期");
+      navError.expired = true;
+      throw navError;
     }
     if (String(nav.mid) !== String(mid)) {
       throw new Error("切换后 B站 返回的是 " + (nav.mid || "未知账号") + "，不是目标账号");
@@ -517,6 +568,7 @@ async function switchAccount(mid) {
       step(`清掉旧账号 Cookie ${old.name} (${old.domain || "?"}${old.path || "/"})`);
     }
 
+    await bumpSwitchStats();
     return finish({ ok: true, steps });
   } catch (err) {
     step(`失败：${err.message || err}，开始恢复原来的 Cookie`);
@@ -530,7 +582,12 @@ async function switchAccount(mid) {
       }
     }
     step("已尝试恢复原来的 Cookie");
-    return finish({ ok: false, error: err.message || String(err), steps });
+    return finish({
+      ok: false,
+      error: err.message || String(err),
+      expired: !!err.expired,
+      steps,
+    });
   }
 }
 

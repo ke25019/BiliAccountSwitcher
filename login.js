@@ -16,9 +16,18 @@
   let accounts = [];
   let loadingMid = "";
   let injectTimer = 0;
+  let debugEnabled = true;
+  let theme = "auto";
 
   function log(...args) {
-    console.log(TAG, ...args);
+    if (debugEnabled) console.log(TAG, ...args);
+  }
+
+  function applyThemeTo(el) {
+    if (!el || !el.classList) return;
+    el.classList.remove("bili-switch-force-light", "bili-switch-force-dark");
+    if (theme === "light") el.classList.add("bili-switch-force-light");
+    else if (theme === "dark") el.classList.add("bili-switch-force-dark");
   }
 
   function send(message) {
@@ -59,6 +68,31 @@
     return '<img class="bili-switch-login-avatar" src="' + url + '" alt="">';
   }
 
+  function removeAccountByMid(mid, callback) {
+    chrome.storage.local.get(STORAGE_KEY, (res) => {
+      const list = Array.isArray(res[STORAGE_KEY]) ? res[STORAGE_KEY] : [];
+      const next = list.filter((a) => String(a.mid) !== String(mid));
+      chrome.storage.local.set({ [STORAGE_KEY]: next }, () => {
+        accounts = next;
+        if (callback) callback();
+      });
+    });
+  }
+
+  function askDeleteExpired(acct) {
+    if (!acct) return;
+    const name = acct.name || acct.mid || "这个账号";
+    const ok = window.confirm(
+      "“" + name + "”的登录信息已经过期，使用它会失败。要删除这个已保存的账号吗？"
+    );
+    if (ok) {
+      removeAccountByMid(acct.mid, () => {
+        renderAccounts();
+        log("已删除过期账号 " + JSON.stringify({ mid: acct.mid }));
+      });
+    }
+  }
+
   function injectEntry() {
     if (document.getElementById("bili-switch-saved-login")) return;
     const host = document.querySelector(".third-party-login-wrapper .sns");
@@ -91,6 +125,7 @@
     });
 
     host.appendChild(item);
+    applyThemeTo(item);
     log("登录页已加入“本地账号”入口");
   }
 
@@ -100,10 +135,20 @@
   }
 
   function loadAccounts(callback) {
-    chrome.storage.local.get(STORAGE_KEY, (res) => {
-      accounts = Array.isArray(res[STORAGE_KEY]) ? res[STORAGE_KEY] : [];
-      callback(accounts);
-    });
+    chrome.storage.local.get(
+      [STORAGE_KEY, "cfgDebug", "cfgTheme"],
+      (res) => {
+        accounts = Array.isArray(res[STORAGE_KEY]) ? res[STORAGE_KEY] : [];
+        debugEnabled = res.cfgDebug !== false;
+        theme = ["auto", "light", "dark"].includes(res.cfgTheme)
+          ? res.cfgTheme
+          : "auto";
+        if ($panel) applyThemeTo($panel);
+        const entry = document.getElementById("bili-switch-saved-login");
+        if (entry) applyThemeTo(entry);
+        callback(accounts);
+      }
+    );
   }
 
   function createPanel() {
@@ -121,6 +166,7 @@
     $list = panel.querySelector(".bili-switch-login-list");
     $error = panel.querySelector(".bili-switch-login-error");
     panel.addEventListener("mousedown", (e) => e.stopPropagation());
+    applyThemeTo(panel);
   }
 
   function positionPanel() {
@@ -222,6 +268,7 @@
       const message = (res && res.error) || "未知错误";
       $error.textContent = "登录失败：" + message;
       log("本地账号登录失败 " + JSON.stringify({ mid: acct.mid, error: message }));
+      if (res && res.expired) askDeleteExpired(acct);
     });
   }
 
@@ -252,7 +299,7 @@
   }
 
   function start() {
-    injectEntry();
+    loadAccounts(() => injectEntry());
     scheduleInject();
     setupCloseHandlers();
 
@@ -261,6 +308,21 @@
       if ($panel && $anchor && !document.contains($anchor)) hidePanel();
     });
     observer.observe(document.body, { childList: true, subtree: true });
+
+    chrome.storage.onChanged.addListener((changes, area) => {
+      if (area !== "local") return;
+      if (changes.cfgDebug) {
+        debugEnabled = changes.cfgDebug.newValue !== false;
+      }
+      if (changes.cfgTheme) {
+        theme = ["auto", "light", "dark"].includes(changes.cfgTheme.newValue)
+          ? changes.cfgTheme.newValue
+          : "auto";
+        if ($panel) applyThemeTo($panel);
+        const entry = document.getElementById("bili-switch-saved-login");
+        if (entry) applyThemeTo(entry);
+      }
+    });
 
     // 登录页有异步渲染，兜底再试几次
     setTimeout(injectEntry, 800);

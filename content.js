@@ -23,7 +23,7 @@
 
   const TAG = "[B站多账号切换]";
   function log(...args) {
-    console.log(TAG, ...args);
+    if (state.debug) console.log(TAG, ...args);
   }
   function logError(...args) {
     console.error(TAG, ...args);
@@ -33,6 +33,8 @@
     accounts: [],
     showBtn: true,
     autoSwitch: true,
+    debug: true,
+    theme: "auto",
     currentUser: { loggedIn: false, mid: "" },
     userReady: false,
   };
@@ -121,6 +123,7 @@
       $toast.className = "bili-switch-toast";
     }
     (document.body || document.documentElement).appendChild($toast);
+    applyThemeTo($toast);
     return $toast;
   }
 
@@ -140,23 +143,50 @@
     );
   }
 
+  function applyThemeTo(el) {
+    if (!el || !el.classList) return;
+    el.classList.remove("bili-switch-force-light", "bili-switch-force-dark");
+    if (state.theme === "light") el.classList.add("bili-switch-force-light");
+    else if (state.theme === "dark") el.classList.add("bili-switch-force-dark");
+  }
+
+  function applyThemeAll() {
+    applyThemeTo(document.getElementById("bili-switch-btn"));
+    applyThemeTo($panel);
+    applyThemeTo($modal);
+    applyThemeTo($toast);
+  }
+
   /* ---------- 设置 / 账号数据 ---------- */
   function loadSettings() {
     chrome.storage.local.get(
-      { cfgAutoSwitch: true, cfgShowBtn: true, [STORAGE_KEY]: [] },
+      {
+        cfgAutoSwitch: true,
+        cfgShowBtn: true,
+        cfgDebug: true,
+        cfgTheme: "auto",
+        [STORAGE_KEY]: [],
+      },
       (res) => {
         state.autoSwitch = res.cfgAutoSwitch !== false;
         state.showBtn = res.cfgShowBtn !== false;
+        state.debug = res.cfgDebug !== false;
+        state.theme = ["auto", "light", "dark"].includes(res.cfgTheme)
+          ? res.cfgTheme
+          : "auto";
         state.accounts = Array.isArray(res[STORAGE_KEY]) ? res[STORAGE_KEY] : [];
         log(
           "读取设置 " +
             JSON.stringify({
               showBtn: state.showBtn,
               autoSwitch: state.autoSwitch,
+              debug: state.debug,
+              theme: state.theme,
               accounts: state.accounts.length,
             })
         );
         applySettings();
+        applyThemeAll();
         renderPanel();
         syncCurrentUser(true);
       }
@@ -181,6 +211,16 @@
     }
     if (changes.cfgAutoSwitch) {
       state.autoSwitch = changes.cfgAutoSwitch.newValue !== false;
+    }
+    if (changes.cfgDebug) {
+      state.debug = changes.cfgDebug.newValue !== false;
+    }
+    if (changes.cfgTheme) {
+      state.theme = ["auto", "light", "dark"].includes(changes.cfgTheme.newValue)
+        ? changes.cfgTheme.newValue
+        : "auto";
+      applyThemeAll();
+      renderPanel();
     }
     if (changes[STORAGE_KEY]) {
       const next = changes[STORAGE_KEY].newValue;
@@ -278,7 +318,6 @@
     btn.id = "bili-switch-btn";
     btn.className = "bili-switch-wrap" + (kind === "header" ? " is-header" : "");
     btn.dataset.kind = kind;
-    btn.title = "切换账号";
     btn.setAttribute("role", "menuitem");
     btn.tabIndex = 0;
     btn.innerHTML =
@@ -314,6 +353,7 @@
         showPanel();
       }
     });
+    applyThemeTo(btn);
     return btn;
   }
 
@@ -502,6 +542,7 @@
     });
     panel.addEventListener("mouseenter", cancelHide);
     panel.addEventListener("mouseleave", () => scheduleHide(220));
+    applyThemeTo(panel);
   }
 
   function cancelHide() {
@@ -546,22 +587,26 @@
     const host = $panel.parentElement;
     const inMenu = host && host !== document.body;
     const hostRect = inMenu ? host.getBoundingClientRect() : null;
+    const anchorLeft = inMenu ? hostRect.left : btnRect.left;
+    const anchorRight = inMenu ? hostRect.right : btnRect.right;
 
-    // 优先放在按钮左边，像 B站 自己的二级浮层
-    let left = (inMenu ? hostRect.left : btnRect.left) - panelRect.width - gap;
-    let top = btnRect.top - 8;
-
-    if (left < margin) {
-      left = btnRect.left;
-      top = btnRect.bottom + gap;
-    }
+    // 菜单里的二级面板优先放右侧；右边放不下再翻到左侧
+    let left = inMenu ? anchorRight + gap : anchorLeft - panelRect.width - gap;
     if (left + panelRect.width > window.innerWidth - margin) {
-      left = Math.max(margin, window.innerWidth - panelRect.width - margin);
+      left = anchorLeft - panelRect.width - gap;
     }
-    if (top + panelRect.height > window.innerHeight - margin) {
-      top = Math.max(margin, btnRect.top - panelRect.height - gap);
+    if (left < margin) {
+      left = Math.max(
+        margin,
+        Math.min(anchorLeft, window.innerWidth - panelRect.width - margin)
+      );
     }
+
+    let top = btnRect.top - 8;
     if (top < margin) top = margin;
+    if (top + panelRect.height > window.innerHeight - margin) {
+      top = Math.max(margin, window.innerHeight - panelRect.height - margin);
+    }
 
     if (inMenu) {
       $panel.style.position = "absolute";
@@ -727,6 +772,7 @@
       "</div>" +
       "</div>";
     document.body.appendChild(mask);
+    applyThemeTo(mask);
     mask.querySelector(".bili-switch-modal-close").addEventListener("click", () => {
       cancelAddFlow();
     });
@@ -856,6 +902,27 @@
     startAddFlow();
   }
 
+  function removeAccountByMid(mid, callback) {
+    chrome.storage.local.get(STORAGE_KEY, (res) => {
+      const list = Array.isArray(res[STORAGE_KEY]) ? res[STORAGE_KEY] : [];
+      const next = list.filter((a) => String(a.mid) !== String(mid));
+      chrome.storage.local.set({ [STORAGE_KEY]: next }, () => {
+        if (callback) callback();
+      });
+    });
+  }
+
+  function askDeleteExpired(acct) {
+    if (!acct) return;
+    const name = acct.name || acct.mid || "这个账号";
+    const ok = window.confirm(
+      "“" + name + "”的登录信息已经过期，切换到它会失败。要删除这个已保存的账号吗？"
+    );
+    if (ok) {
+      removeAccountByMid(acct.mid, () => showToast("已删除过期的账号。"));
+    }
+  }
+
   function switchAccount(idx) {
     const acct = state.accounts[idx];
     if (!acct) return;
@@ -885,6 +952,7 @@
         switching = false;
         logError("切换失败 " + JSON.stringify(res));
         showToast("切换失败：" + ((res && res.error) || "未知错误"), 3200);
+        if (res && res.expired) askDeleteExpired(acct);
         dumpDebugInfo(true);
         reportLastSwitch();
         return;

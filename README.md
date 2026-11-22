@@ -1,8 +1,10 @@
 # B站多账号切换
 
+简体中文 | [English](README.en.md)
+
 B站网页端多账号切换小助手（浏览器插件，Manifest V3）。在 B站顶部用户菜单里加个“切换账号”按钮，方便在几个号之间来回切，不用每次都退出再登录。
 
-当前是 `1.1.3-beta`。
+当前是 `1.1.4-beta`。
 
 ## 主要功能
 
@@ -29,14 +31,14 @@ B站网页端多账号切换小助手（浏览器插件，Manifest V3）。在 B
 ## 文件说明
 
 - 根目录：最新版本的插件文件，直接加载使用即可。
-- `versions/`：历史版本归档，每个版本一个独立完整文件夹（如 `versions/v1.0.0/`、`versions/v1.1.3-beta/`），旧版本会被完整保留，不会被新版本覆盖。
+- `versions/`：历史版本归档，每个版本一个独立完整文件夹（如 `versions/v1.0.0/`、`versions/v1.1.4-beta/`），旧版本会被完整保留，不会被新版本覆盖。
 - `manifest.json`：插件清单，Manifest V3。
 - `background.js`：后台脚本，用 `chrome.cookies` 读写 B站 Cookie、自动抓当前登录信息、退出当前账号。
 - `content.js` / `content.css`：往 B站页面注入“切换账号”按钮和弹出面板。
 - `login.js` / `login.css`：在 B站 登录页加“本地账号”登录方式。
 - `options.html` / `options.css` / `options.js`：插件的设置页面。
 - `icons/`：插件图标。
-- `.gitignore`：本地 AGENTS.md 不会被上传。
+- `LICENSE`：PolyForm Noncommercial License 1.0.0。
 
 ## 调试
 
@@ -45,8 +47,13 @@ B站网页端多账号切换小助手（浏览器插件，Manifest V3）。在 B
 - 后台日志：打开 `chrome://extensions`，找到这个插件，点“服务工作线程”旁边的“检查”，在它的控制台里也能看到同一前缀的日志。
 - 日志里只输出 Cookie 的名字、域和路径，不会输出 Cookie 的值。
 
+## AI 声明
+
+本项目在开发过程中使用了 AI 辅助（代码、文案、测试），所有改动均经过人工检查。
+
 ## 隐私与许可
 
 - 你的账号登录信息只保存在浏览器本地，不会上传到任何服务器。切换账号时由后台脚本在本机替换 Cookie。
 - 本插件是第三方开发，和哔哩哔哩官方没关系。使用前请自己留意 B站的用户协议。
-- 基于 [PolyForm Noncommercial License 1.0.0](https://polyformproject.org/licenses/noncommercial/1.0.0) 发布，个人免费使用，不得用于商业目的。
+- 基于 [PolyForm Noncommercial License 1.0.0](LICENSE) 发布，个人免费使用，不得用于商业目的。
+- 仓库地址：https://github.com/ke25019/BiliAccountSwitcher

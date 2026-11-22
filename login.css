@@ -77,6 +77,7 @@
 
 .bili-switch-login-list {
   overflow-y: auto;
+  max-height: 245px;
   min-height: 0;
 }
 
@@ -150,4 +151,27 @@
 
 .bili-switch-login-error:empty {
   display: none;
+}
+
+/* 设置里强制浅色/深色时，只覆盖插件自己的元素 */
+.bili-switch-force-light {
+  --bg1_float: #ffffff;
+  --text1: #18191c;
+  --text2: #61666d;
+  --text3: #9499a0;
+  --line_regular: #e3e5e7;
+  --graph_bg_thick: #e3e5e7;
+  --graph_bg_regular: #f1f2f3;
+  --brand_blue: #00aeec;
+}
+
+.bili-switch-force-dark {
+  --bg1_float: #242628;
+  --text1: #e7e9eb;
+  --text2: #a2a7ae;
+  --text3: #757a81;
+  --line_regular: #2f3134;
+  --graph_bg_thick: #2f3134;
+  --graph_bg_regular: #232527;
+  --brand_blue: #00aeec;
 }

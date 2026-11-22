@@ -129,18 +129,26 @@
 
 /* 面板和 B站 菜单之间留了 8px 空隙，这块透明区域盖住空隙，
    鼠标从入口移过去时不会短暂离开浮层，B站 的资料卡片就不会回弹 */
+.bili-switch-panel::before,
 .bili-switch-panel::after {
   content: "";
   position: absolute;
   top: 0;
-  right: -8px;
   width: 8px;
   height: 100%;
 }
 
+.bili-switch-panel::before {
+  left: -8px;
+}
+
+.bili-switch-panel::after {
+  right: -8px;
+}
+
 .bili-switch-list {
   overflow-y: auto;
-  max-height: 320px;
+  max-height: 224px;
   padding: 0;
 }
 
@@ -394,4 +402,27 @@
 
 .bili-switch-toast.is-show {
   display: block;
+}
+
+/* 设置里强制浅色/深色时，覆盖 B站 当前主题变量，只作用在插件自己的元素上 */
+.bili-switch-force-light {
+  --bg1_float: #ffffff;
+  --text1: #18191c;
+  --text2: #61666d;
+  --text3: #9499a0;
+  --line_regular: #e3e5e7;
+  --graph_bg_thick: #e3e5e7;
+  --graph_bg_regular: #f1f2f3;
+  --brand_blue: #00aeec;
+}
+
+.bili-switch-force-dark {
+  --bg1_float: #242628;
+  --text1: #e7e9eb;
+  --text2: #a2a7ae;
+  --text3: #757a81;
+  --line_regular: #2f3134;
+  --graph_bg_thick: #2f3134;
+  --graph_bg_regular: #232527;
+  --brand_blue: #00aeec;
 }
