@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "B站多账号切换",
-  "version": "1.0.0",
-  "version_name": "1.0.0-beta.3",
+  "version": "1.1.0",
+  "version_name": "1.1.0-beta",
   "description": "B站网页端多账号切换小助手，在用户菜单里加个“切换账号”，方便在几个号之间来回切。",
   "permissions": [
     "storage",

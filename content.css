@@ -127,6 +127,17 @@
   pointer-events: auto;
 }
 
+/* 面板和 B站 菜单之间留了 8px 空隙，这块透明区域盖住空隙，
+   鼠标从入口移过去时不会短暂离开浮层，B站 的资料卡片就不会回弹 */
+.bili-switch-panel::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: -8px;
+  width: 8px;
+  height: 100%;
+}
+
 .bili-switch-list {
   overflow-y: auto;
   max-height: 320px;

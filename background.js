@@ -31,6 +31,12 @@ const KEEP_LOCAL_COOKIES = new Set([
   "b_lsid",
 ]);
 
+/* 短期登录票据，换号时不恢复旧值，让 B站 自己重新发，避免旧票据把新登录顶掉 */
+const VOLATILE_COOKIE_NAMES = new Set([
+  "bili_ticket",
+  "bili_ticket_expires",
+]);
+
 /* 真正跟账号走的登录相关 Cookie，切换完要清掉旧账号残留的 */
 const ACCOUNT_COOKIE_NAMES = new Set([
   "SESSDATA",
@@ -267,17 +273,27 @@ async function syncCurrent() {
 }
 
 async function fetchNavUser() {
-  const res = await fetch(NAV_API, { credentials: "include", cache: "no-store" });
-  if (!res.ok) return null;
-  const json = await res.json();
-  if (json && json.code === 0 && json.data && json.data.isLogin) {
-    return {
-      mid: String(json.data.mid || ""),
-      name: json.data.uname || "",
-      avatar: json.data.face || "",
-    };
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
+  try {
+    const res = await fetch(NAV_API, {
+      credentials: "include",
+      cache: "no-store",
+      signal: controller.signal,
+    });
+    if (!res.ok) return null;
+    const json = await res.json();
+    if (json && json.code === 0 && json.data && json.data.isLogin) {
+      return {
+        mid: String(json.data.mid || ""),
+        name: json.data.uname || "",
+        avatar: json.data.face || "",
+      };
+    }
+    return null;
+  } finally {
+    clearTimeout(timer);
   }
-  return null;
 }
 
 function normalizeAvatar(url) {
@@ -386,8 +402,27 @@ async function switchAccount(mid) {
     return result;
   };
 
-  const stored = await storageGet(STORAGE_KEY);
-  const accounts = Array.isArray(stored[STORAGE_KEY]) ? stored[STORAGE_KEY] : [];
+  let stored = await storageGet(STORAGE_KEY);
+  let accounts = Array.isArray(stored[STORAGE_KEY]) ? stored[STORAGE_KEY] : [];
+
+  // 离开当前号之前，先把它的 Cookie 刷新保存一遍：
+  // B站 的登录票据会变，存着刚登录时那份，过一会儿切回来就可能失效
+  const beforeAccount =
+    before.loggedIn && before.mid
+      ? accounts.find((a) => String(a.mid) === String(before.mid))
+      : null;
+  if (beforeAccount && String(before.mid) !== String(mid)) {
+    step("先把当前账号的登录状态更新保存");
+    try {
+      const refreshed = await captureAccount();
+      step(refreshed.ok ? "当前账号已更新" : "当前账号更新失败：" + refreshed.error);
+      stored = await storageGet(STORAGE_KEY);
+      accounts = Array.isArray(stored[STORAGE_KEY]) ? stored[STORAGE_KEY] : accounts;
+    } catch (e) {
+      step("当前账号更新异常：" + (e.message || e));
+    }
+  }
+
   const account = accounts.find((a) => String(a.mid) === String(mid));
   if (!account) {
     return finish({ ok: false, error: "找不到这个账号，可能已经在设置页删掉了。", steps });
@@ -410,17 +445,29 @@ async function switchAccount(mid) {
   log("目标 Cookie 名单", account.cookies.map((c) => c.name));
 
   // 设备级 Cookie 不跟着账号换，避免 B站 觉得设备指纹突然变了
-  // 过期的 Cookie 也不写，写进去容易整批失败
+  // 短期票据和过期 Cookie 也不写，旧票据容易把新登录顶掉
   const now = Date.now() / 1000;
   const localCookies = account.cookies.filter((c) => KEEP_LOCAL_COOKIES.has(c.name));
+  const volatileCookies = account.cookies.filter((c) => VOLATILE_COOKIE_NAMES.has(c.name));
   const expiredCookies = account.cookies.filter(
-    (c) => !KEEP_LOCAL_COOKIES.has(c.name) && typeof c.expirationDate === "number" && c.expirationDate < now
+    (c) =>
+      !KEEP_LOCAL_COOKIES.has(c.name) &&
+      !VOLATILE_COOKIE_NAMES.has(c.name) &&
+      typeof c.expirationDate === "number" &&
+      c.expirationDate < now
   );
   const toWrite = account.cookies.filter(
-    (c) => c.name && !KEEP_LOCAL_COOKIES.has(c.name) && !expiredCookies.includes(c)
+    (c) =>
+      c.name &&
+      !KEEP_LOCAL_COOKIES.has(c.name) &&
+      !VOLATILE_COOKIE_NAMES.has(c.name) &&
+      !expiredCookies.includes(c)
   );
-  step(`准备写入 ${toWrite.length} 个；跳过设备 Cookie ${localCookies.length} 个、过期 Cookie ${expiredCookies.length} 个`);
+  step(
+    `准备写入 ${toWrite.length} 个；跳过设备 Cookie ${localCookies.length} 个、短期票据 ${volatileCookies.length} 个、过期 Cookie ${expiredCookies.length} 个`
+  );
   if (localCookies.length) step("保留本机设备 Cookie：" + localCookies.map((c) => c.name).join(", "));
+  if (volatileCookies.length) step("跳过短期票据：" + volatileCookies.map((c) => c.name).join(", "));
   if (expiredCookies.length) step("跳过过期 Cookie：" + expiredCookies.map((c) => c.name).join(", "));
 
   const written = [];
@@ -437,6 +484,16 @@ async function switchAccount(mid) {
       throw new Error("SESSDATA 写入后校验不一致");
     }
     step("校验通过，SESSDATA 已写入");
+
+    // 用 B站 自己的 nav 接口再确认一次，防止写进去了但登录状态其实已经失效
+    const nav = await fetchNavUser();
+    if (!nav) {
+      throw new Error("切换后 B站 接口没返回登录状态，保存的登录信息可能已经过期");
+    }
+    if (String(nav.mid) !== String(mid)) {
+      throw new Error("切换后 B站 返回的是 " + (nav.mid || "未知账号") + "，不是目标账号");
+    }
+    step(`B站 接口校验通过：${nav.name || nav.mid} (${nav.mid})`);
 
     // 清掉旧账号残留的登录 Cookie，避免两套登录信息混在一起
     for (const old of backup) {

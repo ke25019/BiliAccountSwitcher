@@ -444,15 +444,27 @@
   }
 
   /* ---------- 面板 ---------- */
+  function panelHost() {
+    if (!anchorBtn) return document.body;
+    // 菜单里的入口：面板塞进 B站 的浮层里面，鼠标移过去时资料卡片不会收起来
+    return anchorBtn.closest(".v-popover-content") || document.body;
+  }
+
   function createPanel() {
-    const exists = document.getElementById("bili-switch-panel");
-    if (exists) {
-      $panel = exists;
+    const host = panelHost();
+    let panel = document.getElementById("bili-switch-panel");
+    if (panel && panel.parentElement !== host) {
+      panel.remove();
+      panel = null;
+    }
+
+    if (panel) {
+      $panel = panel;
       $list = document.getElementById("bili-switch-list");
       return;
     }
 
-    const panel = document.createElement("div");
+    panel = document.createElement("div");
     panel.id = "bili-switch-panel";
     panel.className = "bili-switch-panel";
     panel.setAttribute("role", "menu");
@@ -467,7 +479,7 @@
       '<span class="bili-switch-arrow">' +
       ARROW_ICON +
       "</span></div>";
-    document.body.appendChild(panel);
+    host.appendChild(panel);
 
     $panel = panel;
     $list = document.getElementById("bili-switch-list");
@@ -524,12 +536,13 @@
     const gap = 8;
     const margin = 8;
 
-    // 菜单里的入口按整个菜单左边缘来放，避免面板压住菜单本身
-    const menuBox = anchorBtn.closest(".v-popover-content, .avatar-panel-popover");
-    const rightEdge = menuBox ? menuBox.getBoundingClientRect().left : btnRect.left;
+    // 面板在菜单浮层里时用 absolute，位置换算成相对菜单的坐标
+    const host = $panel.parentElement;
+    const inMenu = host && host !== document.body;
+    const hostRect = inMenu ? host.getBoundingClientRect() : null;
 
     // 优先放在按钮左边，像 B站 自己的二级浮层
-    let left = rightEdge - panelRect.width - gap;
+    let left = (inMenu ? hostRect.left : btnRect.left) - panelRect.width - gap;
     let top = btnRect.top - 8;
 
     if (left < margin) {
@@ -542,9 +555,17 @@
     if (top + panelRect.height > window.innerHeight - margin) {
       top = Math.max(margin, btnRect.top - panelRect.height - gap);
     }
+    if (top < margin) top = margin;
 
-    $panel.style.left = left + "px";
-    $panel.style.top = top + "px";
+    if (inMenu) {
+      $panel.style.position = "absolute";
+      $panel.style.left = left - hostRect.left + "px";
+      $panel.style.top = top - hostRect.top + "px";
+    } else {
+      $panel.style.position = "fixed";
+      $panel.style.left = left + "px";
+      $panel.style.top = top + "px";
+    }
   }
 
   function refreshCurrentProfile() {
