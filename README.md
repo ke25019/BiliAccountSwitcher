@@ -24,7 +24,7 @@ B站网页端多账号切换小助手（浏览器插件，Manifest V3）。在 B
 1. 到 Microsoft Edge 加载项商店 点「获取」（目前尚未发布），浏览器会自动装好，以后也会自动更新。
 2. 想手动装或是试测试版，请到 [Releases](https://github.com/ke25019/BiliAccountSwitcher/releases) 下载对应版本的 zip 解压，在扩展管理页打开「开发人员模式」→「加载解压缩的扩展」。
 
-> Chrome / Edge 需要 121 以上版本。Firefox 121 以上也能直接用，清单里同时写了两种后台脚本写法；要是 Firefox 里读不到登录状态，去扩展的站点权限里把 bilibili.com 打开。
+> Chrome / Edge 需要 121 以上版本。
 
 ## 文件说明
 

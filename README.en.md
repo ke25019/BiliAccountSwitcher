@@ -22,7 +22,7 @@ Current version: `1.1.4-beta`
 1. Go to Microsoft Edge Add-ons and click **Get** (not published yet); the browser will install and keep it updated automatically.
 2. To install manually or try a beta, download the matching zip from [Releases](https://github.com/ke25019/BiliAccountSwitcher/releases), extract it, then open **Developer mode** → **Load unpacked** on the extensions page.
 
-> Chrome/Edge 121+ is required. Firefox 121+ also works; if login state is not detected in Firefox, enable site access for `bilibili.com` in the extension settings.
+> Chrome/Edge 121+ is required.
 
 ## Files
 
