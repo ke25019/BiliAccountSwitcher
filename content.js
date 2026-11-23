@@ -203,6 +203,8 @@
       hidePanel();
       const btn = document.getElementById("bili-switch-btn");
       if (btn) btn.remove();
+      const loginEntry = document.getElementById("bili-switch-login-entry");
+      if (loginEntry) loginEntry.remove();
       return;
     }
     scheduleInsert(0);
@@ -407,38 +409,73 @@
     return null;
   }
 
-  /* 没登录时 B站 顶部只有“登录”，把入口放到它旁边 */
-  function findLoginItem() {
-    const header = document.querySelector(".bili-header, #biliHeader, .mini-header");
-    if (!header) return null;
-    return searchRow(header, ["登录", "登录/注册"]);
+  /* 没登录时，入口放进 B站 的登录浮层里，不再挂在头像旁边 */
+  function findLoginPopover() {
+    return document.querySelector(".login-panel-popover");
+  }
+
+  function injectLoginEntry() {
+    if (document.getElementById("bili-switch-login-entry")) return true;
+    const popover = findLoginPopover();
+    if (!popover) return false;
+
+    const row = document.createElement("div");
+    row.id = "bili-switch-login-entry";
+    row.className = "bili-switch-login-entry";
+    row.setAttribute("role", "menuitem");
+    row.tabIndex = 0;
+    row.innerHTML =
+      '<span class="bili-switch-login-entry-icon">' +
+      SWAP_ICON +
+      "</span>" +
+      '<span class="bili-switch-login-entry-text">切换已保存账号</span>' +
+      '<span class="bili-switch-arrow">' +
+      ARROW_ICON +
+      "</span>";
+
+    const open = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      anchorBtn = row;
+      if (isPanelOpen()) hidePanel();
+      else showPanel();
+    };
+    row.addEventListener("click", open);
+    row.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") open(e);
+    });
+
+    const registerTip = popover.querySelector(".register-tip");
+    if (registerTip) registerTip.insertAdjacentElement("afterend", row);
+    else popover.appendChild(row);
+    applyThemeTo(row);
+    log("已在登录浮层加入账号切换入口");
+    return true;
   }
 
   function insertButton() {
     if (!state.showBtn || !state.userReady) return;
-    if (document.getElementById("bili-switch-btn")) return;
 
     // B站页面一直在动，这里限一下频率，别把主线程拖住
     const now = Date.now();
     if (now - lastSearch < 400) return;
     lastSearch = now;
 
-    let kind = "menu";
-    let found = null;
-    if (state.currentUser.loggedIn) {
-      found = findLogoutItem();
-    } else {
-      // 没登录时优先用顶部“登录”旁边的入口，别插到可能残留的隐藏菜单里
-      found = findLoginItem();
-      kind = "header";
-      if (!found) {
-        found = findLogoutItem();
-        kind = "menu";
-      }
+    if (!state.currentUser.loggedIn) {
+      const menuBtn = document.getElementById("bili-switch-btn");
+      if (menuBtn) menuBtn.remove();
+      injectLoginEntry();
+      return;
     }
+
+    const loginEntry = document.getElementById("bili-switch-login-entry");
+    if (loginEntry) loginEntry.remove();
+    if (document.getElementById("bili-switch-btn")) return;
+
+    const found = findLogoutItem();
     if (!found) return;
 
-    const btn = createButton(kind);
+    const btn = createButton("menu");
     let holder = btn;
     const parentTag = found.parent.tagName;
     if (parentTag === "UL" || parentTag === "OL") {
@@ -446,12 +483,24 @@
       holder.className = "bili-switch-li";
       holder.appendChild(btn);
     }
-    found.parent.insertBefore(holder, found.item);
+
+    // 优先塞进 B站 自己的 .links-item 列表，跟“个人中心”等行共用间距；
+    // 找不到列表时才退回到“退出登录”前面。
+    const linksList =
+      found.item.closest(".links-item") || found.parent.querySelector(".links-item");
+    if (linksList) {
+      if (linksList.contains(found.item)) linksList.insertBefore(holder, found.item);
+      else linksList.appendChild(holder);
+    } else {
+      found.parent.insertBefore(holder, found.item);
+    }
+
     log(
       "注入入口 " +
         JSON.stringify({
-          kind,
+          kind: "menu",
           parent: parentTag,
+          inLinksList: !!linksList,
           path: location.pathname,
         })
     );
@@ -467,7 +516,10 @@
 
   function onHeaderHover(e) {
     if (!state.showBtn || !state.userReady) return;
-    if (document.getElementById("bili-switch-btn")) return;
+    const existing = state.currentUser.loggedIn
+      ? document.getElementById("bili-switch-btn")
+      : document.getElementById("bili-switch-login-entry");
+    if (existing) return;
     const target = e.target;
     if (!(target instanceof Element)) return;
     if (target.closest(".bili-header, #biliHeader, .mini-header, .v-popover")) {
@@ -478,12 +530,24 @@
   function watchDom() {
     const observer = new MutationObserver((mutations) => {
       if (!state.showBtn || !state.userReady) return;
-      if (document.getElementById("bili-switch-btn")) return;
+      const existing = state.currentUser.loggedIn
+        ? document.getElementById("bili-switch-btn")
+        : document.getElementById("bili-switch-login-entry");
+      if (existing) return;
       for (const mutation of mutations) {
         if (mutation.type !== "childList") continue;
         for (const node of mutation.addedNodes) {
           if (node.nodeType !== Node.ELEMENT_NODE) continue;
-          if (node.id === "bili-switch-btn") continue;
+          if (node.id === "bili-switch-btn" || node.id === "bili-switch-login-entry") {
+            continue;
+          }
+          if (
+            (node.matches && node.matches(".login-panel-popover")) ||
+            (node.querySelector && node.querySelector(".login-panel-popover"))
+          ) {
+            scheduleInsert(60);
+            return;
+          }
           if (node.textContent && node.textContent.indexOf("退出登录") !== -1) {
             scheduleInsert(60);
             return;

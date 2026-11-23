@@ -4,7 +4,7 @@
 
 A Manifest V3 browser extension for switching between multiple Bilibili accounts on the web. It adds a **Switch account** entry above **Log out** in the Bilibili user menu, so you can change accounts without logging out and back in every time.
 
-Current version: `1.1.6-beta`
+Current version: `1.1.7-beta`
 
 ## Features
 
@@ -12,7 +12,7 @@ Current version: `1.1.6-beta`
 - **Slim account data**: each account stores only the login cookies `SESSDATA`, `bili_jct`, `DedeUserID`, `DedeUserID__ckMd5` and `sid`. Theme, playback settings, buvid and resolution cookies are not stored per account and are not included in exported configs.
 - **Switch accounts**: a **Switch account** row above **Log out**, with an icon, text and a small arrow. Hover it to open the account panel; the panel stays open while your pointer is over it.
 - **Safe switching**: before leaving an account, its latest cookies are saved again; short-lived tickets are skipped; the extension verifies the new login through Bilibili's nav API and restores the previous login if verification fails.
-- **Works while logged out**: when logged out, the entry appears next to the **Log in** button in the header, and saved accounts can still be used.
+- **Works while logged out**: when logged out, the entry sits inside the header **Log in** popover, and saved accounts can still be used.
 - **Add account**: opens an in-page login window with the Bilibili login page embedded. The current account is saved first, then logged out so the login form can appear; closing the window restores the previous account.
 - **Local account login**: a fourth **Local account** option next to WeChat / Weibo / QQ on the Bilibili login page, letting you log in with a saved account's cookies.
 - **Dark mode**: the injected entry, account panel, add-account window and settings page follow Bilibili's dark theme.

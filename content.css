@@ -319,6 +319,54 @@
   margin-left: auto;
 }
 
+/* 未登录时放在 B站 登录浮层里的入口 */
+.bili-switch-login-entry {
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  height: 40px;
+  margin-top: 12px;
+  padding: 0 14px;
+  border-top: 1px solid var(--line_regular, #e3e5e7);
+  border-radius: 0 0 8px 8px;
+  color: var(--text2, #61666d);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  outline: none;
+  transition: background-color 0.3s;
+}
+
+.bili-switch-login-entry:hover,
+.bili-switch-login-entry:focus-visible {
+  background: var(--graph_bg_thick, #e3e5e7);
+}
+
+.bili-switch-login-entry-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  margin-right: 16px;
+  flex: none;
+}
+
+.bili-switch-login-entry-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.bili-switch-login-entry-text {
+  flex: 1;
+  text-align: left;
+}
+
+.bili-switch-login-entry .bili-switch-arrow {
+  margin-left: 8px;
+  flex: none;
+}
+
 .bili-switch-empty {
   padding: 18px 12px;
   color: var(--text3, #9499a0);
