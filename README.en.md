@@ -19,10 +19,8 @@ Current version: `1.1.4-beta`
 
 ## Install
 
-1. Download or clone this repository.
-2. Open the extensions page: `chrome://extensions` in Chrome/Edge, or `about:debugging#/runtime/this-firefox` in Firefox.
-3. In Chrome/Edge, enable **Developer mode**, click **Load unpacked** and select this folder. In Firefox, click **Load Temporary Add-on** and select `manifest.json`.
-4. Open Bilibili, log in to your accounts, then use **Switch account** from the user menu.
+1. Go to Microsoft Edge Add-ons and click **Get** (not published yet); the browser will install and keep it updated automatically.
+2. To install manually or try a beta, download the matching zip from [Releases](https://github.com/ke25019/BiliAccountSwitcher/releases), extract it, then open **Developer mode** → **Load unpacked** on the extensions page.
 
 > Chrome/Edge 121+ is required. Firefox 121+ also works; if login state is not detected in Firefox, enable site access for `bilibili.com` in the extension settings.
 
