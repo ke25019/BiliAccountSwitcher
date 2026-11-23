@@ -2,6 +2,13 @@
 (function () {
   const STORAGE_KEY = "bili_switcher_accounts";
   const STATS_KEY = "bili_switcher_stats";
+  const AUTH_COOKIE_NAMES = new Set([
+    "SESSDATA",
+    "bili_jct",
+    "DedeUserID",
+    "DedeUserID__ckMd5",
+    "sid",
+  ]);
   const $list = document.getElementById("accountList");
   const $empty = document.getElementById("emptyState");
   const $count = document.getElementById("accountCount");
@@ -17,7 +24,7 @@
   fetch(chrome.runtime.getURL("manifest.json"))
     .then((r) => r.json())
     .then((m) => {
-      if ($version) $version.textContent = m.version_name || m.version || "1.1.4-beta";
+      if ($version) $version.textContent = m.version_name || m.version || "1.1.5-beta";
     })
     .catch(() => {});
 
@@ -139,6 +146,15 @@
     return String(acct.mid || "") + "|" + String(acct.addedAt || "");
   }
 
+  function slimAccount(acct) {
+    return {
+      ...acct,
+      cookies: Array.isArray(acct.cookies)
+        ? acct.cookies.filter((c) => AUTH_COOKIE_NAMES.has(c.name))
+        : [],
+    };
+  }
+
   function avatarUrl(src) {
     const str = String(src || "");
     if (!str) return "";
@@ -227,7 +243,9 @@
                 ? res.cfgTheme
                 : "auto",
             },
-            accounts: Array.isArray(res[STORAGE_KEY]) ? res[STORAGE_KEY] : [],
+            accounts: Array.isArray(res[STORAGE_KEY])
+              ? res[STORAGE_KEY].map(slimAccount)
+              : [],
             stats: res[STATS_KEY] || {},
           };
           const blob = new Blob([JSON.stringify(data, null, 2)], {
@@ -264,11 +282,14 @@
           if (!data || !Array.isArray(data.accounts)) {
             throw new Error("文件里没有账号数据");
           }
+          const importedAccounts = data.accounts
+            .filter((acct) => acct && typeof acct === "object")
+            .map(slimAccount);
           if (!window.confirm("导入会覆盖当前的账号和设置，继续吗？")) return;
           const settings = data.settings || {};
           chrome.storage.local.set(
             {
-              [STORAGE_KEY]: data.accounts,
+              [STORAGE_KEY]: importedAccounts,
               cfgAutoSwitch: settings.cfgAutoSwitch !== false,
               cfgShowBtn: settings.cfgShowBtn !== false,
               cfgDebug: settings.cfgDebug !== false,

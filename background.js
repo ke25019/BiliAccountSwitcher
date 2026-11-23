@@ -30,30 +30,18 @@ function logError(...args) {
   console.error(TAG, ...args);
 }
 
-/* 这些是设备/浏览器级别的 Cookie，切换账号时保留当前值，不跟着账号换 */
-const KEEP_LOCAL_COOKIES = new Set([
-  "buvid3",
-  "buvid4",
-  "b_nut",
-  "buvid_fp",
-  "buvid_fp_plain",
-  "_uuid",
-  "b_lsid",
-]);
-
-/* 短期登录票据，换号时不恢复旧值，让 B站 自己重新发，避免旧票据把新登录顶掉 */
-const VOLATILE_COOKIE_NAMES = new Set([
-  "bili_ticket",
-  "bili_ticket_expires",
-]);
-
-/* 真正跟账号走的登录相关 Cookie，切换完要清掉旧账号残留的 */
-const ACCOUNT_COOKIE_NAMES = new Set([
+/* 真正跟账号登录状态相关的 Cookie，账号数据和导出只保留这些 */
+const AUTH_COOKIE_NAMES = new Set([
   "SESSDATA",
   "bili_jct",
   "DedeUserID",
   "DedeUserID__ckMd5",
   "sid",
+]);
+
+/* 退出当前账号/清理旧号时要删掉的登录 Cookie */
+const ACCOUNT_COOKIE_NAMES = new Set([
+  ...AUTH_COOKIE_NAMES,
   "bili_ticket",
   "bili_ticket_expires",
 ]);
@@ -342,11 +330,12 @@ async function captureAccount() {
   }
   const midCookie = cookies.find((c) => c.name === "DedeUserID" && c.value);
   const mid = (user && user.mid) || (midCookie && midCookie.value) || "";
+  const authCookies = cookies.filter((c) => AUTH_COOKIE_NAMES.has(c.name));
   const account = {
     mid: mid || "-",
     name: (user && user.name) || ("B站账号 " + (mid || "-")),
     avatar: normalizeAvatar(user && user.avatar),
-    cookies: cookies,
+    cookies: authCookies,
     addedAt: Date.now(),
   };
 
@@ -371,7 +360,8 @@ async function captureAccount() {
   log("保存账号", {
     mid: account.mid,
     name: account.name,
-    cookieCount: cookies.length,
+    cookieCount: authCookies.length,
+    rawCookieCount: cookies.length,
     updated: idx >= 0,
     navUser: !!user,
   });
@@ -507,31 +497,24 @@ async function switchAccount(mid) {
   log("当前 Cookie 名单", backup.map((c) => c.name));
   log("目标 Cookie 名单", account.cookies.map((c) => c.name));
 
-  // 设备级 Cookie 不跟着账号换，避免 B站 觉得设备指纹突然变了
-  // 短期票据和过期 Cookie 也不写，旧票据容易把新登录顶掉
+  // 账号数据里只保留登录相关 Cookie；就算旧数据里存了通用项，这里也只写白名单
   const now = Date.now() / 1000;
-  const localCookies = account.cookies.filter((c) => KEEP_LOCAL_COOKIES.has(c.name));
-  const volatileCookies = account.cookies.filter((c) => VOLATILE_COOKIE_NAMES.has(c.name));
-  const expiredCookies = account.cookies.filter(
-    (c) =>
-      !KEEP_LOCAL_COOKIES.has(c.name) &&
-      !VOLATILE_COOKIE_NAMES.has(c.name) &&
-      typeof c.expirationDate === "number" &&
-      c.expirationDate < now
+  const authCookies = account.cookies.filter((c) => AUTH_COOKIE_NAMES.has(c.name));
+  const ignoredCookies = account.cookies.filter((c) => !AUTH_COOKIE_NAMES.has(c.name));
+  const expiredCookies = authCookies.filter(
+    (c) => typeof c.expirationDate === "number" && c.expirationDate < now
   );
-  const toWrite = account.cookies.filter(
-    (c) =>
-      c.name &&
-      !KEEP_LOCAL_COOKIES.has(c.name) &&
-      !VOLATILE_COOKIE_NAMES.has(c.name) &&
-      !expiredCookies.includes(c)
-  );
+  const toWrite = authCookies.filter((c) => !expiredCookies.includes(c));
+
   step(
-    `准备写入 ${toWrite.length} 个；跳过设备 Cookie ${localCookies.length} 个、短期票据 ${volatileCookies.length} 个、过期 Cookie ${expiredCookies.length} 个`
+    `目标账号存了 ${account.cookies.length} 个 Cookie，其中登录相关 ${authCookies.length} 个；准备写入 ${toWrite.length} 个，忽略通用项 ${ignoredCookies.length} 个、过期项 ${expiredCookies.length} 个`
   );
-  if (localCookies.length) step("保留本机设备 Cookie：" + localCookies.map((c) => c.name).join(", "));
-  if (volatileCookies.length) step("跳过短期票据：" + volatileCookies.map((c) => c.name).join(", "));
-  if (expiredCookies.length) step("跳过过期 Cookie：" + expiredCookies.map((c) => c.name).join(", "));
+  if (ignoredCookies.length) {
+    step("忽略通用 Cookie：" + ignoredCookies.map((c) => c.name).join(", "));
+  }
+  if (expiredCookies.length) {
+    step("跳过过期 Cookie：" + expiredCookies.map((c) => c.name).join(", "));
+  }
 
   const written = [];
   try {
@@ -663,6 +646,38 @@ async function openLoginPage() {
   log("打开登录页：弹窗失败，退回标签页");
   await createTab(LOGIN_URL);
   return { ok: true, reused: false };
+}
+
+/* 老版本账号里存了全量 Cookie，升级后顺手裁成登录相关的几项 */
+async function slimStoredAccounts() {
+  try {
+    const stored = await storageGet(STORAGE_KEY);
+    const accounts = Array.isArray(stored[STORAGE_KEY]) ? stored[STORAGE_KEY] : [];
+    let changed = false;
+    const next = accounts.map((acct) => {
+      const cookies = Array.isArray(acct.cookies) ? acct.cookies : [];
+      const kept = cookies.filter((c) => AUTH_COOKIE_NAMES.has(c.name));
+      if (kept.length !== cookies.length) changed = true;
+      return { ...acct, cookies: kept };
+    });
+    if (changed) {
+      await storageSet({ [STORAGE_KEY]: next });
+      log("已把历史账号的 Cookie 裁剪为登录相关项");
+    }
+  } catch (e) {
+    warn("裁剪历史账号 Cookie 失败", e.message || e);
+  }
+}
+
+if (chrome.runtime.onInstalled) {
+  chrome.runtime.onInstalled.addListener(() => {
+    slimStoredAccounts();
+  });
+}
+if (chrome.runtime.onStartup) {
+  chrome.runtime.onStartup.addListener(() => {
+    slimStoredAccounts();
+  });
 }
 
 /* ---------- 消息入口 ---------- */

@@ -4,11 +4,12 @@
 
 A Manifest V3 browser extension for switching between multiple Bilibili accounts on the web. It adds a **Switch account** entry above **Log out** in the Bilibili user menu, so you can change accounts without logging out and back in every time.
 
-Current version: `1.1.4-beta`
+Current version: `1.1.5-beta`
 
 ## Features
 
 - **Automatic account capture**: after you log in to Bilibili, the extension reads the current account's name, avatar and login cookies and saves them locally.
+- **Slim account data**: each account stores only the login cookies `SESSDATA`, `bili_jct`, `DedeUserID`, `DedeUserID__ckMd5` and `sid`. Theme, playback settings, buvid and resolution cookies are not stored per account and are not included in exported configs.
 - **Switch accounts**: a **Switch account** row above **Log out**, with an icon, text and a small arrow. Hover it to open the account panel; the panel stays open while your pointer is over it.
 - **Safe switching**: before leaving an account, its latest cookies are saved again; short-lived tickets are skipped; the extension verifies the new login through Bilibili's nav API and restores the previous login if verification fails.
 - **Works while logged out**: when logged out, the entry appears next to the **Log in** button in the header, and saved accounts can still be used.
