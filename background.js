@@ -66,6 +66,15 @@ function storageSet(items) {
   });
 }
 
+function storageClear() {
+  return new Promise((resolve) => {
+    chrome.storage.local.clear(() => {
+      void chrome.runtime.lastError;
+      resolve();
+    });
+  });
+}
+
 function cookiesGetAll(filter) {
   return new Promise((resolve) => {
     chrome.cookies.getAll(filter, (cookies) => {
@@ -648,6 +657,29 @@ async function openLoginPage() {
   return { ok: true, reused: false };
 }
 
+async function openOptionsPage() {
+  if (chrome.runtime.openOptionsPage) {
+    try {
+      await chrome.runtime.openOptionsPage();
+      return { ok: true };
+    } catch (_) {
+      // 某些环境调用失败，下面退回标签页
+    }
+  }
+  await createTab(chrome.runtime.getURL("options.html"));
+  return { ok: true };
+}
+
+async function clearDataAndCookies() {
+  const cookies = await getBiliCookies();
+  log("清除数据：准备删除 B站 Cookie", { count: cookies.length });
+  for (const cookie of cookies) {
+    await cookieRemove(removeDetails(cookie));
+  }
+  await storageClear();
+  return { ok: true, removedCookies: cookies.length };
+}
+
 /* 老版本账号里存了全量 Cookie，升级后顺手裁成登录相关的几项 */
 async function slimStoredAccounts() {
   try {
@@ -703,6 +735,10 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         return debugInfo();
       case "openLogin":
         return openLoginPage();
+      case "openOptions":
+        return openOptionsPage();
+      case "clearDataAndCookies":
+        return clearDataAndCookies();
       default:
         return { ok: false, error: "不认识的操作：" + action };
     }

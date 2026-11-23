@@ -20,6 +20,11 @@
     '<svg viewBox="0 0 24 24" aria-hidden="true">' +
     '<path d="m9 5 7 7-7 7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>' +
     "</svg>";
+  const GEAR_ICON =
+    '<svg viewBox="0 0 24 24" aria-hidden="true">' +
+    '<path d="M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4Z" fill="none" stroke="currentColor" stroke-width="1.7"></path>' +
+    '<path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5v.2h-4v-.2a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H2.9v-4h.2a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.5v-.2h4v.2a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.5 1h.2v4h-.2a1.7 1.7 0 0 0-1.5 1Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"></path>' +
+    "</svg>";
 
   const TAG = "[B站多账号切换]";
   function log(...args) {
@@ -524,6 +529,13 @@
       "</span><span>添加账户</span>" +
       '<span class="bili-switch-arrow">' +
       ARROW_ICON +
+      "</span></div>" +
+      '<div class="bili-switch-settings" id="bili-switch-settings" role="menuitem" tabindex="0">' +
+      '<span class="bili-switch-add-icon">' +
+      GEAR_ICON +
+      "</span><span>完整设置</span>" +
+      '<span class="bili-switch-arrow">' +
+      ARROW_ICON +
       "</span></div>";
     host.appendChild(panel);
 
@@ -538,6 +550,16 @@
       if (e.key === "Enter" || e.key === " ") {
         e.preventDefault();
         handleAdd();
+      }
+    });
+    document.getElementById("bili-switch-settings").addEventListener("click", (e) => {
+      e.stopPropagation();
+      openOptionsPage();
+    });
+    document.getElementById("bili-switch-settings").addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        openOptionsPage();
       }
     });
     panel.addEventListener("mouseenter", cancelHide);
@@ -900,6 +922,15 @@
 
   function handleAdd() {
     startAddFlow();
+  }
+
+  function openOptionsPage() {
+    hidePanel();
+    send({ action: "openOptions" }).then((res) => {
+      if (!res || !res.ok) {
+        showToast("设置页没打开，去扩展管理里打开吧。");
+      }
+    });
   }
 
   function removeAccountByMid(mid, callback) {

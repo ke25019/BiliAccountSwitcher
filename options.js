@@ -24,7 +24,7 @@
   fetch(chrome.runtime.getURL("manifest.json"))
     .then((r) => r.json())
     .then((m) => {
-      if ($version) $version.textContent = m.version_name || m.version || "1.1.5-beta";
+      if ($version) $version.textContent = m.version_name || m.version || "1.1.6-beta";
     })
     .catch(() => {});
 
@@ -308,20 +308,25 @@
     });
   }
 
-  // 恢复默认设置（不清账号）
-  const $resetSettings = document.getElementById("resetSettings");
-  if ($resetSettings) {
-    $resetSettings.addEventListener("click", () => {
-      if (!window.confirm("恢复默认设置？已保存的账号不会删除。")) return;
-      chrome.storage.local.set(
-        {
-          cfgAutoSwitch: true,
-          cfgShowBtn: true,
-          cfgDebug: true,
-          cfgTheme: "auto",
-        },
-        () => loadSettings()
+  // 清除扩展数据，并删除 bilibili.com 的所有 Cookie（会退出当前登录）
+  const $clearData = document.getElementById("clearData");
+  if ($clearData) {
+    $clearData.addEventListener("click", () => {
+      const ok = window.confirm(
+        "会删除所有已保存账号、设置和统计，并删除 bilibili.com 的所有 Cookie；当前 B站 会退出登录。确定吗？"
       );
+      if (!ok) return;
+      chrome.runtime.sendMessage({ action: "clearDataAndCookies" }, (res) => {
+        if (chrome.runtime.lastError || !res || !res.ok) {
+          const message = chrome.runtime.lastError
+            ? chrome.runtime.lastError.message
+            : (res && res.error) || "未知错误";
+          window.alert("清除失败：" + message);
+          return;
+        }
+        window.alert("已清除，删除了 " + res.removedCookies + " 个 B站 Cookie。");
+        loadSettings();
+      });
     });
   }
 

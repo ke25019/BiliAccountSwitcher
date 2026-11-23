@@ -290,6 +290,35 @@
   margin-left: auto;
 }
 
+.bili-switch-settings {
+  display: flex;
+  align-items: center;
+  height: 38px;
+  box-sizing: border-box;
+  padding: 0 14px;
+  border-radius: 8px;
+  color: var(--text2, #61666d);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  outline: none;
+  transition: background-color 0.3s;
+}
+
+.bili-switch-settings:hover,
+.bili-switch-settings:focus-visible {
+  background: var(--graph_bg_thick, #e3e5e7);
+}
+
+.bili-switch-settings .bili-switch-add-icon {
+  margin-right: 16px;
+  color: inherit;
+}
+
+.bili-switch-settings .bili-switch-arrow {
+  margin-left: auto;
+}
+
 .bili-switch-empty {
   padding: 18px 12px;
   color: var(--text3, #9499a0);
