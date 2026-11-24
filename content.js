@@ -476,6 +476,7 @@
     if (!found) return;
 
     const btn = createButton("menu");
+    btn.classList.add("single-link-item");
     let holder = btn;
     const parentTag = found.parent.tagName;
     if (parentTag === "UL" || parentTag === "OL") {
@@ -484,17 +485,23 @@
       holder.appendChild(btn);
     }
 
-    // 优先塞进 B站 自己的 .links-item 列表，跟“个人中心”等行共用间距；
-    // 菜单里可能有多个分组，选“主题”那一组（最后一个），别插到上面那组去。
-    const lists = found.parent.querySelectorAll(".links-item");
-    const linksList = lists.length
-      ? lists[lists.length - 1]
-      : found.item.closest(".links-item");
-    if (linksList) {
-      if (linksList.contains(found.item)) linksList.insertBefore(holder, found.item);
-      else linksList.appendChild(holder);
+    // 直接放到“主题”这一行后面，跟它共用同一个父容器和 .single-link-item 样式，
+    // 这样左右内边距、行高、间距都跟原生行完全一致。
+    const nativeRows = found.parent.querySelectorAll(".single-link-item");
+    const anchorRow = nativeRows.length ? nativeRows[nativeRows.length - 1] : null;
+    if (anchorRow && anchorRow !== found.item && !anchorRow.contains(found.item)) {
+      anchorRow.insertAdjacentElement("afterend", holder);
     } else {
-      found.parent.insertBefore(holder, found.item);
+      const lists = found.parent.querySelectorAll(".links-item");
+      const linksList = lists.length
+        ? lists[lists.length - 1]
+        : found.item.closest(".links-item");
+      if (linksList) {
+        if (linksList.contains(found.item)) linksList.insertBefore(holder, found.item);
+        else linksList.appendChild(holder);
+      } else {
+        found.parent.insertBefore(holder, found.item);
+      }
     }
 
     log(
