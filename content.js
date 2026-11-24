@@ -202,12 +202,17 @@
     if (!state.showBtn) {
       hidePanel();
       const btn = document.getElementById("bili-switch-btn");
-      if (btn) btn.remove();
+      if (btn) {
+        const wrapper = btn.closest(".bili-switch-only");
+        if (wrapper) wrapper.remove();
+        else btn.remove();
+      }
       const loginEntry = document.getElementById("bili-switch-login-entry");
       if (loginEntry) loginEntry.remove();
       return;
     }
-    scheduleInsert(0);
+    lastSearch = 0;
+    scheduleInsert(40);
   }
 
   chrome.storage.onChanged.addListener((changes, area) => {
@@ -485,23 +490,22 @@
       holder.appendChild(btn);
     }
 
-    // 直接放到“主题”这一行后面，跟它共用同一个父容器和 .single-link-item 样式，
-    // 这样左右内边距、行高、间距都跟原生行完全一致。
-    const nativeRows = found.parent.querySelectorAll(".single-link-item");
-    const anchorRow = nativeRows.length ? nativeRows[nativeRows.length - 1] : null;
-    if (anchorRow && anchorRow !== found.item && !anchorRow.contains(found.item)) {
-      anchorRow.insertAdjacentElement("afterend", holder);
-    } else {
-      const lists = found.parent.querySelectorAll(".links-item");
-      const linksList = lists.length
-        ? lists[lists.length - 1]
-        : found.item.closest(".links-item");
-      if (linksList) {
-        if (linksList.contains(found.item)) linksList.insertBefore(holder, found.item);
-        else linksList.appendChild(holder);
-      } else {
-        found.parent.insertBefore(holder, found.item);
+    // 放到“退出登录”上面、分隔线下面：外面包一层 .links-item，
+    // 让入口继续吃到 B站 原生的 .single-link-item 行高和内边距。
+    const splitLines = found.parent.querySelectorAll(".split-line");
+    let lastSplit = null;
+    splitLines.forEach((line) => {
+      if (line.compareDocumentPosition(found.item) & Node.DOCUMENT_POSITION_FOLLOWING) {
+        lastSplit = line;
       }
+    });
+    if (lastSplit && parentTag !== "UL" && parentTag !== "OL") {
+      const wrapper = document.createElement("div");
+      wrapper.className = "links-item bili-switch-only";
+      wrapper.appendChild(holder);
+      lastSplit.insertAdjacentElement("afterend", wrapper);
+    } else {
+      found.parent.insertBefore(holder, found.item);
     }
 
     log(
