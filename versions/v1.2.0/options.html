@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>B站多账号切换 - 设置</title>
+<link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <div class="opts-wrap">
+    <header class="opts-header">
+      <h1>B站多账号切换</h1>
+      <p class="opts-subtitle">设置</p>
+    </header>
+
+    <section class="opts-card">
+      <div class="opts-card-head">
+        <h2 class="opts-section-title">账号管理</h2>
+        <span class="opts-count" id="accountCount">0 个账号</span>
+      </div>
+      <p class="opts-hint">登录 B站 后会自动记下当前账号，也可以从网页端“添加账户”登录新号。账号的登录凭据（Cookie）只存在本机浏览器里，不会上传到任何地方。</p>
+      <div class="opts-account-list" id="accountList"></div>
+      <div class="opts-empty" id="emptyState" style="display:none;">暂无保存的账号。登录 B站 后会自动记下来；也可以在网页端点“切换账号”→“添加账户”登录一个。</div>
+    </section>
+
+    <section class="opts-card">
+      <h2 class="opts-section-title">外观与交互</h2>
+      <p class="opts-hint">注入界面外观</p>
+
+      <div class="opts-segment" id="themeSegment" role="radiogroup" aria-label="注入界面外观">
+        <label class="opts-segment-item">
+          <input type="radio" name="cfgTheme" value="auto">
+          <span>跟随B站深色模式</span>
+        </label>
+        <label class="opts-segment-item">
+          <input type="radio" name="cfgTheme" value="light">
+          <span>始终浅色</span>
+        </label>
+        <label class="opts-segment-item">
+          <input type="radio" name="cfgTheme" value="dark">
+          <span>始终深色</span>
+        </label>
+      </div>
+
+      <label class="opts-row">
+        <input type="checkbox" id="cfgShowBtn">
+        <span>在 B站 顶部菜单显示“切换账号”入口</span>
+      </label>
+      <label class="opts-row">
+        <input type="checkbox" id="cfgAutoSwitch">
+        <span>切换账号后自动刷新页面</span>
+      </label>
+      <label class="opts-row">
+        <input type="checkbox" id="cfgDebug">
+        <span>输出调试日志到控制台</span>
+      </label>
+    </section>
+
+    <section class="opts-card">
+      <h2 class="opts-section-title">数据与统计</h2>
+      <p class="opts-stats" id="statsText">今日切换 0 次 · 累计切换 0 次</p>
+      <p class="opts-hint">导出的配置只包含登录相关的几个 Cookie，别随便发给别人。</p>
+      <div class="opts-actions">
+        <button type="button" class="opts-btn" id="resetStats">重置统计</button>
+        <button type="button" class="opts-btn" id="exportConfig">导出配置</button>
+        <button type="button" class="opts-btn" id="importConfig">导入配置</button>
+        <button type="button" class="opts-btn opts-btn-danger" id="clearData">清除数据并删除所有 Cookie</button>
+        <input type="file" id="importFile" accept=".json,application/json" hidden>
+      </div>
+    </section>
+
+    <section class="opts-card opts-legal-card">
+      <details class="opts-legal">
+        <summary>免责声明与开源许可</summary>
+        <p class="opts-disclaimer">
+          本插件仅供个人学习和日常使用，由第三方开发，与哔哩哔哩官方无任何关联，也不代表哔哩哔哩背书或认可。
+          使用本插件切换账号属于个人行为，请你自行遵守哔哩哔哩的用户协议与社区规范。因使用本插件导致的账号异常、数据丢失或任何
+          直接、间接损失，由使用者自行承担，开发者不提供任何保证，也不承担责任。
+        </p>
+        <p class="opts-license">
+          本插件基于 <strong>PolyForm Noncommercial License 1.0.0</strong> 发布。
+          你可以自由使用、复制、修改和分发，但 <strong>不得用于商业目的</strong>。完整许可条款请参阅：
+          <a href="https://polyformproject.org/licenses/noncommercial/1.0.0" target="_blank" rel="noopener">
+            PolyForm Noncommercial License 1.0.0
+          </a>
+        </p>
+        <p class="opts-notes">如需商业使用，请另行联系开发者取得授权。</p>
+      </details>
+    </section>
+
+    <footer class="opts-footer">
+      <div class="opts-footer-main">
+        <div>B站多账号切换 v<span id="appVersion">1.2.0</span> · 适用于 Microsoft Edge (Chromium) 及 Chrome 系列浏览器</div>
+        <div>Copyright (c) 2026 ke25019 · 基于 <a href="https://polyformproject.org/licenses/noncommercial/1.0.0" target="_blank" rel="noopener">PolyForm Noncommercial 1.0.0</a> 发布，禁止商用</div>
+      </div>
+      <a class="opts-repo" href="https://github.com/ke25019/BiliAccountSwitcher" target="_blank" rel="noopener">GitHub 仓库</a>
+    </footer>
+  </div>
+  <script src="options.js"></script>
+</body>
+</html>
