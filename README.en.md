@@ -4,7 +4,7 @@
 
 A Manifest V3 browser extension for switching between multiple Bilibili accounts on the web. It adds a **Switch account** entry above **Log out** in the Bilibili user menu, so you can change accounts without logging out and back in every time.
 
-Current version: `1.2.0`
+Current version: `1.2.1`
 
 ## Features
 
