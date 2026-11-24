@@ -485,9 +485,11 @@
     }
 
     // 优先塞进 B站 自己的 .links-item 列表，跟“个人中心”等行共用间距；
-    // 找不到列表时才退回到“退出登录”前面。
-    const linksList =
-      found.item.closest(".links-item") || found.parent.querySelector(".links-item");
+    // 菜单里可能有多个分组，选“主题”那一组（最后一个），别插到上面那组去。
+    const lists = found.parent.querySelectorAll(".links-item");
+    const linksList = lists.length
+      ? lists[lists.length - 1]
+      : found.item.closest(".links-item");
     if (linksList) {
       if (linksList.contains(found.item)) linksList.insertBefore(holder, found.item);
       else linksList.appendChild(holder);

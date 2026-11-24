@@ -24,7 +24,7 @@
   fetch(chrome.runtime.getURL("manifest.json"))
     .then((r) => r.json())
     .then((m) => {
-      if ($version) $version.textContent = m.version_name || m.version || "1.1.7-beta";
+      if ($version) $version.textContent = m.version_name || m.version || "1.1.8-beta";
     })
     .catch(() => {});
 
